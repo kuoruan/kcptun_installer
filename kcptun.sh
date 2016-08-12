@@ -445,7 +445,7 @@ function check_update(){
 		echo "未找到已安装的 Kcptun Server 执行文件, 请将该脚本放到 kcptun 文件夹同级目录！"
 	fi
 
-	local new_config_version=`echo "$VERSION_CONTENT" | jq -r ".config_version" | grep -oE "[0-9]+"
+	local new_config_version=`echo "$VERSION_CONTENT" | jq -r ".config_version" | grep -oE "[0-9]+"`
 	[ -z "$new_config_version" ] && new_config_version=0
 	if [ "$new_config_version" -gt "$CONFIG_VERSION" ]; then
 		echo "发现配置文件更新, 正在更新配置文件..."
@@ -476,15 +476,15 @@ action=$1
 case "$action" in
 	install)
 		install_kcptun
-	;;
+		;;
 	uninstall)
 		uninstall_kcptun
-	;;
+		;;
 	update)
 		check_update
-	;;
+		;;
 	*)
-	echo "参数错误！ [${action} ]"
-	echo "请使用: `basename $0` {install|uninstall|update}"
-	;;
+		echo "参数错误！ [${action}]"
+		echo "请使用: `basename $0` {install|uninstall|update}"
+		;;
 esac
