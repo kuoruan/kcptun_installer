@@ -14,8 +14,7 @@
 #   its users to monitor and control a number of processes on \
 #   UNIX-like operating systems.
 # processname: supervisord
-# config: /etc/supervisord.conf
-# config: /etc/sysconfig/supervisord
+# config: /etc/supervisor/supervisord.conf
 # pidfile: /var/run/supervisord.pid
 #
 ### BEGIN INIT INFO
@@ -31,51 +30,46 @@
 # Source function library
 . /etc/rc.d/init.d/functions
 
-# Source system settings
-if [ -f /etc/sysconfig/supervisord ]; then
-    . /etc/sysconfig/supervisord
-fi
-
 # Path to the supervisorctl script, server binary,
 # and short-form for messages.
-supervisorctl=/usr/bin/supervisorctl
-supervisord=${SUPERVISORD-/usr/bin/supervisord}
-prog=supervisord
-pidfile=${PIDFILE-/var/run/supervisord.pid}
-lockfile=${LOCKFILE-/var/lock/subsys/supervisord}
-STOP_TIMEOUT=${STOP_TIMEOUT-60}
-OPTIONS="${OPTIONS--c /etc/supervisor/supervisord.conf}"
+SUPERVISORCTL=/usr/bin/supervisorctl
+SUPERVISORD=/usr/bin/supervisord
+PROG=supervisord
+PIDFILE=/var/run/supervisord.pid
+LOCKFILE=/var/lock/subsys/supervisord
+STOP_TIMEOUT=60
+OPTIONS="-c /etc/supervisor/supervisord.conf"
 RETVAL=0
 
 start() {
-    echo -n $"Starting $prog: "
-    daemon --pidfile=${pidfile} $supervisord $OPTIONS
+    echo -n $"Starting $PROG: "
+    daemon --pidfile=${PIDFILE} $SUPERVISORD $OPTIONS -j $PIDFILE
     RETVAL=$?
     echo
     if [ $RETVAL -eq 0 ]; then
-        touch ${lockfile}
-        $supervisorctl $OPTIONS status
+        touch ${LOCKFILE}
+        $SUPERVISORCTL $OPTIONS status
     fi
     return $RETVAL
 }
 
 stop() {
-    echo -n $"Stopping $prog: "
-    killproc -p ${pidfile} -d ${STOP_TIMEOUT} $supervisord
+    echo -n $"Stopping $PROG: "
+    killproc -p ${PIDFILE} -d ${STOP_TIMEOUT} $SUPERVISORD
     RETVAL=$?
     echo
-    [ $RETVAL -eq 0 ] && rm -rf ${lockfile} ${pidfile}
+    [ $RETVAL -eq 0 ] && rm -rf ${LOCKFILE} ${PIDFILE}
 }
 
 reload() {
-    echo -n $"Reloading $prog: "
-    LSB=1 killproc -p $pidfile $supervisord -HUP
+    echo -n $"Reloading $PROG: "
+    LSB=1 killproc -p $PIDFILE $SUPERVISORD -HUP
     RETVAL=$?
     echo
     if [ $RETVAL -eq 7 ]; then
-        failure $"$prog reload"
+        failure $"$PROG reload"
     else
-        $supervisorctl $OPTIONS status
+        $SUPERVISORCTL $OPTIONS status
     fi
 }
 
@@ -92,15 +86,15 @@ case "$1" in
         stop
         ;;
     status)
-        status -p ${pidfile} $supervisord
+        status -p ${PIDFILE} $SUPERVISORD
         RETVAL=$?
-        [ $RETVAL -eq 0 ] && $supervisorctl $OPTIONS status
+        [ $RETVAL -eq 0 ] && $SUPERVISORCTL $OPTIONS status
         ;;
     restart)
         restart
         ;;
     condrestart|try-restart)
-        if status -p ${pidfile} $supervisord >&/dev/null; then
+        if status -p ${PIDFILE} $SUPERVISORD >&/dev/null; then
           stop
           start
         fi
@@ -109,7 +103,7 @@ case "$1" in
         reload
         ;;
     *)
-        echo $"Usage: $prog {start|stop|restart|condrestart|try-restart|force-reload|reload}"
+        echo $"Usage: $PROG {start|stop|restart|condrestart|try-restart|force-reload|reload}"
         RETVAL=2
 esac
 
