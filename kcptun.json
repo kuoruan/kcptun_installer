@@ -1,1 +1,1 @@
-{"shell_version": 2, "shell_url": "https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.sh", "config_version": 2}
+{"shell_version": 3, "shell_url": "https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.sh", "change_log": "1.修复无法输入dscp的问题;\n2.修复Ubuntu和Debian下安装失败的问题;\n3.修复CentOS下无法停止Supervisor的问题;\n4.更新脚本,添加服务启动脚本的自动更新", "config_version": 2, "init_version": 1}

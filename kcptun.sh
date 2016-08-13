@@ -19,8 +19,9 @@ COM
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 
-SHELL_VERSION=2
+SHELL_VERSION=3
 CONFIG_VERSION=2
+INIT_VERSION=0
 
 clear
 echo
@@ -497,7 +498,7 @@ function set_config(){
 		else
 			expr $dscp_value + 0 &> /dev/null
 			if [ $? -eq 0 ]; then
-				if [ $parityshard_value -gt 0 ]; then
+				if [ $dscp_value -gt 0 ]; then
 					echo
 					echo "---------------------------"
 					echo "DSCP = $dscp_value"
@@ -506,7 +507,7 @@ function set_config(){
 					break
 				fi
 			else
-				echo "请输入大于0的数, 或者直接回车！"
+				echo "输入有误, 请输入大于0的数字, 或直接回车！"
 			fi
 		fi
 	done
@@ -534,7 +535,6 @@ function pre_install(){
 	if [ "$OS" == 'CentOS' ]; then
 		yum install -y epel-release
 		yum --enablerepo=epel install -y curl wget jq python-setuptools
-		easy_install supervisor
 	else
 		apt-get -y update
 		apt-get -y install curl wget jq python-setuptools
@@ -552,6 +552,7 @@ function pre_install(){
 			fi
 		fi
 	fi
+	easy_install supervisor
 
 	mkdir -p /etc/supervisor/conf.d
 	echo_supervisord_conf > /etc/supervisor/supervisord.conf
@@ -688,19 +689,21 @@ function show_config_info(){
 	echo
 }
 
-init_service(){
-	# Download init script
+# Download init script
+downlod_init_script() {
 	if [ "$OS" == 'CentOS' ]; then
 		init_file_url="https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/redhat.init"
 	else
 		init_file_url="https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/ubuntu.init"
 	fi
 	if ! wget --no-check-certificate -O /etc/init.d/supervisord "$init_file_url"; then
-		echo "下载 supervisor 自启脚本失败！"
+		echo "下载 Supervisor 自启脚本失败！"
 		exit_shell
 	fi
 	chmod a+x /etc/init.d/supervisord
+}
 
+init_service(){
 	if [ "$OS" == 'CentOS' ]; then
 		chkconfig --add supervisord
 		chkconfig supervisord on
@@ -711,11 +714,11 @@ init_service(){
 	fi
 
 	service supervisord start
-	sleep 5
 	if [ $? -ne 0 ]; then
 		echo "启动 Supervisord 失败！"
 		exit_shell
 	else
+		sleep 5
 		supervisorctl reload
 		supervisorctl restart kcptun
 
@@ -752,7 +755,7 @@ function install_kcptun() {
 	server_file=/usr/share/kcptun/server_"$FILE_SUFFIX"
 	if [ -f "$server_file" ]; then
 		chmod a+x "$server_file"
-		init_service
+		downlod_init_script && init_service
 
 		clear
 		echo
@@ -773,7 +776,11 @@ function check_update(){
 	local new_shell_version=`echo "$VERSION_CONTENT" | jq -r ".shell_version" | grep -oE "[0-9]+"`
 	[ -z "$new_shell_version" ] && new_shell_version=0
 	if [ "$new_shell_version" -gt "$SHELL_VERSION" ]; then
-		echo "发现脚本文件更新 (版本号: ${new_shell_version}), 按任意键开始更新, 或者 Ctrl+C 取消"
+		local change_log=`echo "$VERSION_CONTENT" | jq -r ".change_log"`
+		echo "发现脚本文件更新 (版本号: ${new_shell_version})"
+		echo -e "更新说明: \n${change_log}"
+		echo
+		echo "按任意键开始更新, 或者 Ctrl+C 取消"
 		click_to_continue
 		echo "正在更新脚本文件..."
 		local new_shell_url=`echo "$VERSION_CONTENT" | jq -r ".shell_url"`
@@ -784,7 +791,7 @@ function check_update(){
 			echo "更新脚本失败..."
 		else
 			chmod a+x "$shell_path"
-			sed -ri "s/CONFIG_VERSION=[0-9]+/CONFIG_VERSION=${CONFIG_VERSION}/" "${shell_path}"
+			sed -ri "s/CONFIG_VERSION=[0-9]+/CONFIG_VERSION=${CONFIG_VERSION}/" "$shell_path"
 			rm -f "$shell_path".bak
 			clear
 			echo
@@ -803,7 +810,11 @@ function check_update(){
 		local remote_kcptun_version=`echo "$KCPTUN_CONTENT" | jq -r ".tag_name" | grep -oE "[0-9]+"`
 		[ -z "$remote_kcptun_version" ] && remote_kcptun_version=0
 		if [ "$remote_kcptun_version" -gt "$local_kcptun_version" ]; then
-			echo "发现 Kcptun 新版本 (v${remote_kcptun_version}), 按任意键开始更新, 或者 Ctrl+C 取消"
+			local kcptun_version_desc=`echo "$KCPTUN_CONTENT" | jq -r ".name"`
+			echo "发现 Kcptun 新版本 (v${remote_kcptun_version})"
+			echo -e "更新说明: \n${kcptun_version_desc}"
+			echo
+			echo "按任意键开始更新, 或者 Ctrl+C 取消"
 			click_to_continue
 			echo "正在自动更新 Kcptun..."
 			download_file
@@ -828,7 +839,19 @@ function check_update(){
 	if [ "$new_config_version" -gt "$CONFIG_VERSION" ]; then
 		echo "发现配置更新, 需要重新设置 Kcptun..."
 		reconfig_kcptun
-		sed -i "s/CONFIG_VERSION=${CONFIG_VERSION}/CONFIG_VERSION=${new_config_version}/" "${shell_path}"
+		sed -i "s/CONFIG_VERSION=${CONFIG_VERSION}/CONFIG_VERSION=${new_config_version}/" "$shell_path"
+	fi
+
+	local new_init_version=`echo "$VERSION_CONTENT" | jq -r ".init_version" | grep -oE "[0-9]+"`
+	[ -z "$new_init_version" ] && new_init_version=0
+	if [ "$new_init_version" -gt "$INIT_VERSION" ]; then
+		echo "发现服务启动脚本存在更新, 正在自动更新..."
+		checkos
+		downlod_init_script
+		sed -i "s/INIT_VERSION=${INIT_VERSION}/INIT_VERSION=${new_init_version}/" "$shell_path"
+		echo
+		echo "服务启动脚本已更新到 v${new_init_version}, 可能需要重启服务器才能生效！"
+		echo
 	fi
 }
 
