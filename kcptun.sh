@@ -676,9 +676,9 @@ function show_config_info(){
 	echo -e "Kcptun 目录: \033[41;37m /usr/share/kcptun \033[0m"
 	echo -e "Kcptun 日志文件: \033[41;37m /var/log/kcptun.log \033[0m"
 	echo
-	echo -e "如需重新配置服务端, 请使用: \033[41;37m `basename $0` reconfig \033[0m"
-	echo -e "更新服务端, 请使用: \033[41;37m `basename $0` update \033[0m"
-	echo -e "卸载服务端, 请使用: \033[41;37m `basename $0` uninstall \033[0m"
+	echo -e "如需重新配置服务端, 请使用: \033[41;37m ${0} reconfig \033[0m"
+	echo -e "更新服务端, 请使用: \033[41;37m ${0} update \033[0m"
+	echo -e "卸载服务端, 请使用: \033[41;37m ${0} uninstall \033[0m"
 	echo
 	echo "欢迎访问扩软博客: https://blog.kuoruan.com/"
 	echo
@@ -784,12 +784,12 @@ function check_update(){
 			echo "更新脚本失败..."
 		else
 			chmod a+x "$shell_path"
+			sed -ri "s/CONFIG_VERSION=[0-9]+/CONFIG_VERSION=${CONFIG_VERSION}/" "${shell_path}"
+			rm -f "$shell_path".bak
 			clear
 			echo
 			echo "脚本已更新, 正在运行新的脚本..."
 			echo
-
-			sed -ri "s/CONFIG_VERSION=[0-9]+/CONFIG_VERSION=${CONFIG_VERSION}/" "${shell_path}"
 
 			$shell_path update
 			exit 0
