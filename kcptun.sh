@@ -773,6 +773,8 @@ function check_update(){
 	local new_shell_version=`echo "$VERSION_CONTENT" | jq -r ".shell_version" | grep -oE "[0-9]+"`
 	[ -z "$new_shell_version" ] && new_shell_version=0
 	if [ "$new_shell_version" -gt "$SHELL_VERSION" ]; then
+		echo "发现脚本文件更新 (版本号: ${new_shell_version}), 按任意键开始更新, 或者 Ctrl+C 取消"
+		click_to_continue
 		echo "正在更新脚本文件..."
 		local new_shell_url=`echo "$VERSION_CONTENT" | jq -r ".shell_url"`
 		mv -f $shell_path "$shell_path".bak
@@ -824,7 +826,7 @@ function check_update(){
 	local new_config_version=`echo "$VERSION_CONTENT" | jq -r ".config_version" | grep -oE "[0-9]+"`
 	[ -z "$new_config_version" ] && new_config_version=0
 	if [ "$new_config_version" -gt "$CONFIG_VERSION" ]; then
-		echo "发现配置文件更新, 正在更新配置文件..."
+		echo "发现配置更新, 需要重新设置 Kcptun..."
 		reconfig_kcptun
 		sed -i "s/CONFIG_VERSION=${CONFIG_VERSION}/CONFIG_VERSION=${new_config_version}/" "${shell_path}"
 	fi
