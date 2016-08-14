@@ -21,7 +21,7 @@ export PATH
 
 SHELL_VERSION=4
 CONFIG_VERSION=2
-INIT_VERSION=2
+INIT_VERSION=1
 
 clear
 echo
@@ -133,6 +133,58 @@ function click_to_continue(){
 		stty $SAVEDSTTY
 	}
 	char=`get_char`
+}
+
+check_install() {
+	if [ -f /etc/supervisor/supervisord.conf -a -d /usr/share/kcptun/ ]; then
+		echo "似乎你曾经安装过 Kcptun Server"
+		echo
+		while true
+		do
+			echo "请选择你希望的操作:"
+			echo "(1) 覆盖安装"
+			echo "(2) 重新配置"
+			echo "(3) 检查更新"
+			echo "(4) 卸载"
+			echo "(5) 退出"
+			read -p "(请选择 [1~5], 默认: 覆盖安装):" sel
+			if [ -z "$sel" ]; then
+				echo "开始覆盖安装 Kcptun Server..."
+				echo
+				return
+			else
+				expr $sel + 0 &> /dev/null
+				if [ $? -eq 0 ]; then
+					case $sel in
+						1)
+							echo "开始覆盖安装 Kcptun Server..."
+							echo
+							return
+							;;
+						2)
+							reconfig_kcptun
+							exit 0
+							;;
+						3)
+							check_update
+							exit 0
+							;;
+						4)
+							uninstall_kcptun
+							exit 0
+							;;
+						5)
+							exit 0;;
+						*)
+							echo "请输入有效数字(1~4)！"
+							continue;;
+					esac
+				else
+					echo "输入有误, 请输入数字！"
+				fi
+			fi
+		done
+	fi
 }
 
 function set_config(){
@@ -761,6 +813,7 @@ function install_kcptun(){
 	checkos
 	rootness
 	disable_selinux
+	check_install
 	set_config
 	pre_install
 	get_json_content
@@ -883,6 +936,9 @@ function check_update(){
 		echo "正在自动更新启动脚本..."
 		checkos
 		downlod_init_script
+		if centosversion 7; then
+			systemctl daemon-reload
+		fi
 		sed -i "s/INIT_VERSION=${INIT_VERSION}/INIT_VERSION=${new_init_version}/" "$shell_path"
 		echo
 		echo "服务启动脚本已更新到 v${new_init_version}, 可能需要重启服务器才能生效！"
