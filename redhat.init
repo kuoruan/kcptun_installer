@@ -1,21 +1,4 @@
-#!/bin/bash
-#
-# supervisord   Startup script for the Supervisor process control system
-#
-# Author:       Mike McGrath <mmcgrath@redhat.com> (based off yumupdatesd)
-#               Jason Koppe <jkoppe@indeed.com> adjusted to read sysconfig,
-#                   use supervisord tools to start/stop, conditionally wait
-#                   for child processes to shutdown, and startup later
-#               Erwan Queffelec <erwan.queffelec@gmail.com>
-#                   make script LSB-compliant
-#
-# chkconfig:    345 83 04
-# description: Supervisor is a client/server system that allows \
-#   its users to monitor and control a number of processes on \
-#   UNIX-like operating systems.
-# processname: supervisord
-# config: /etc/supervisor/supervisord.conf
-# pidfile: /var/run/supervisord.pid
+#! /bin/bash
 #
 ### BEGIN INIT INFO
 # Provides: supervisord
@@ -36,75 +19,61 @@ SUPERVISORCTL=/usr/bin/supervisorctl
 SUPERVISORD=/usr/bin/supervisord
 PROG=supervisord
 PIDFILE=/var/run/supervisord.pid
-LOCKFILE=/var/lock/subsys/supervisord
 STOP_TIMEOUT=60
 OPTIONS="-c /etc/supervisor/supervisord.conf"
 RETVAL=0
 
-start() {
-    echo -n $"Starting $PROG: "
-    daemon --pidfile=${PIDFILE} $SUPERVISORD $OPTIONS -j $PIDFILE
-    RETVAL=$?
-    echo
-    if [ $RETVAL -eq 0 ]; then
-        touch ${LOCKFILE}
-        $SUPERVISORCTL $OPTIONS status
-    fi
-    return $RETVAL
-}
-
-stop() {
-    echo -n $"Stopping $PROG: "
-    killproc -p ${PIDFILE} -d ${STOP_TIMEOUT} $SUPERVISORD
-    RETVAL=$?
-    echo
-    [ $RETVAL -eq 0 ] && rm -rf ${LOCKFILE} ${PIDFILE}
-}
-
-reload() {
-    echo -n $"Reloading $PROG: "
-    LSB=1 killproc -p $PIDFILE $SUPERVISORD -HUP
-    RETVAL=$?
-    echo
-    if [ $RETVAL -eq 7 ]; then
-        failure $"$PROG reload"
+do_start() {
+    if status -p ${PIDFILE} $SUPERVISORD >&/dev/null; then
+        echo "$PROG is already running."
+        RETVAL=0
     else
-        $SUPERVISORCTL $OPTIONS status
+        echo -n $"Starting $PROG: "
+        daemon --pidfile=${PIDFILE} $SUPERVISORD $OPTIONS -j ${PIDFILE}
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && $SUPERVISORCTL $OPTIONS status
+    fi
+
+}
+
+do_stop() {
+    if status -p ${PIDFILE} $SUPERVISORD >&/dev/null; then
+        echo -n $"Stopping $PROG: "
+        killproc -p ${PIDFILE} -d ${STOP_TIMEOUT} $SUPERVISORD
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && rm -rf ${PIDFILE}
+    else
+        echo "$PROG is not running."
+        RETVAL=0
     fi
 }
 
-restart() {
-    stop
-    start
+chk_status() {
+    status -p ${PIDFILE} $SUPERVISORD
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && $SUPERVISORCTL $OPTIONS status
 }
 
 case "$1" in
     start)
-        start
+        do_start
         ;;
     stop)
-        stop
+        do_stop
         ;;
     status)
-        status -p ${PIDFILE} $SUPERVISORD
-        RETVAL=$?
-        [ $RETVAL -eq 0 ] && $SUPERVISORCTL $OPTIONS status
+        chk_status
         ;;
     restart)
-        restart
-        ;;
-    condrestart|try-restart)
-        if status -p ${PIDFILE} $SUPERVISORD >&/dev/null; then
-          stop
-          start
-        fi
-        ;;
-    force-reload|reload)
-        reload
+        do_stop
+        do_start
         ;;
     *)
-        echo $"Usage: $PROG {start|stop|restart|condrestart|try-restart|force-reload|reload}"
+        echo $"Usage: /etc/init.d/$PROG {start|stop|restart|status}"
         RETVAL=2
+        ;;
 esac
 
 exit $RETVAL

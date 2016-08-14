@@ -19,9 +19,9 @@ COM
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 
-SHELL_VERSION=3
+SHELL_VERSION=4
 CONFIG_VERSION=2
-INIT_VERSION=0
+INIT_VERSION=2
 
 clear
 echo
@@ -79,11 +79,15 @@ function get_machine_type(){
 
 # CentOS version
 function centosversion(){
-	local code=$1
-	local version="`get_osversion`"
-	local main_ver=${version%%.*}
-	if [ $main_ver == $code ]; then
-		return 0
+	if [ "$OS" == 'CentOS' ]; then
+		local code=$1
+		local version="`get_osversion`"
+		local main_ver=${version%%.*}
+		if [ $main_ver == $code ]; then
+			return 0
+		else
+			return 1
+		fi
 	else
 		return 1
 	fi
@@ -553,9 +557,13 @@ function pre_install(){
 		fi
 	fi
 	easy_install supervisor
+	if [ $? -ne 0 ]; then
+		echo "安装 Supervisor 失败！"
+		exit_shell
+	fi
 
+	[ -f /etc/supervisor/supervisord.conf ] || echo_supervisord_conf > /etc/supervisor/supervisord.conf
 	mkdir -p /etc/supervisor/conf.d
-	echo_supervisord_conf > /etc/supervisor/supervisord.conf
 	cd $CUR_DIR
 }
 
@@ -624,9 +632,16 @@ function firewall_set(){
 # Config kcptun
 function config_kcptun(){
 	if [ -f /etc/supervisor/supervisord.conf ]; then
-		grep -q "files=\/etc\/supervisor\/conf.d\/\*\.conf" /etc/supervisor/supervisord.conf || {
-			echo -e "[include]\nfiles=/etc/supervisor/conf.d/*.conf" >> /etc/supervisor/supervisord.conf
-		}
+		# sed -i 's/^\[include\]$/&\nfiles = \/etc\/supervisor\/conf.d\/\*\.conf/;t;$a [include]\nfiles = /etc/supervisor/conf.d/*.conf' /etc/supervisor/supervisord.conf
+
+		if ! grep -q "^files\s*=\s*\/etc\/supervisor\/conf\.d\/\*\.conf$" /etc/supervisor/supervisord.conf; then
+			if grep -q "^\[include\]$" /etc/supervisor/superisord.conf; then
+				sed -i '/^\[include\]$/a files = \/etc\/supervisor\/conf.d\/\*\.conf' /etc/supervisor/supervisord.conf
+			else
+				sed -i '$a [include]\nfiles = /etc/supervisor/conf.d/*.conf' /etc/supervisor/supervisord.conf
+			fi
+		fi
+
 		cat > /etc/supervisor/conf.d/kcptun.conf<<-EOF
 [program:kcptun]
 directory=/usr/share/kcptun
@@ -643,50 +658,6 @@ EOF
 		echo "未找到 Supervisor 配置文件！"
 		exit_shell
 	fi
-}
-
-function show_config_info(){
-	local kcptun_client_args="-r \"${IP}:${kcptunport}\" -l \":8388\""
-	[ -n "$kcptunpwd" ] && kcptun_client_args="${kcptun_client_args} --key \"${kcptunpwd}\""
-	[ -n "$crypt_methods" ] && kcptun_client_args="${kcptun_client_args} --crypt ${crypt_methods}"
-	[ -n "$comm_mode" ] && kcptun_client_args="${kcptun_client_args} --mode ${comm_mode}"
-	[ -n "$nocomp" ] && kcptun_client_args="${kcptun_client_args} --nocomp"
-	[ -n "$datashard_value" ] && kcptun_client_args="${kcptun_client_args} --datashard ${datashard_value}"
-	[ -n "$parityshard_value" ] && kcptun_client_args="${kcptun_client_args} --parityshard ${parityshard_value}"
-	[ -n "$dscp_value" ] && kcptun_client_args="${kcptun_client_args} --dscp ${dscp_value}"
-
-	echo -e "服务器IP: \033[41;37m ${IP} \033[0m"
-	echo -e "端口: \033[41;37m ${kcptunport} \033[0m"
-	echo -e "加速地址: ${forwardip}:${forwardport}"
-	[ -n "$kcptunpwd" ] && echo -e "密码: \033[41;37m ${kcptunpwd} \033[0m"
-	[ -n "$crypt_methods" ] && echo -e "加密方式 Crypt: \033[41;37m ${crypt_methods} \033[0m"
-	[ -n "$comm_mode" ] && echo -e "加速模式 Mode: \033[41;37m ${comm_mode} \033[0m"
-	[ -n "$mtu_value" ] && echo -e "MTU: \033[41;37m ${mtu_value} \033[0m"
-	[ -n "$sndwnd_value" ] && echo -e "发送窗口大小 Sndwnd: \033[41;37m ${sndwnd_value} \033[0m"
-	[ -n "$rcvwnd_value" ] && echo -e "接受窗口大小 Rcvwnd: \033[41;37m ${rcvwnd_value} \033[0m"
-	[ -n "$nocomp" ] && echo -e "数据压缩: \033[41;37m 已禁用 \033[0m"
-	[ -n "$datashard_value" ] && echo -e "前向纠错 Datashard: \033[41;37m ${datashard_value} \033[0m"
-	[ -n "$parityshard_value" ] && echo -e "前向纠错 Parityshard: \033[41;37m ${parityshard_value} \033[0m"
-	[ -n "$dscp_value" ] && echo -e "差分服务代码点 DSCP: \033[41;37m ${dscp_value} \033[0m"
-	echo
-	echo "推荐的客户端参数为: "
-	echo -e "\033[41;37m ${kcptun_client_args} \033[0m"
-	echo
-	echo "其他参数请自行计算或设置, 详细信息可以查看: https://github.com/xtaci/kcptun"
-	echo
-	echo -e "Kcptun 目录: \033[41;37m /usr/share/kcptun \033[0m"
-	echo -e "Kcptun 日志文件: \033[41;37m /var/log/kcptun.log \033[0m"
-	echo
-	echo -e "如需重新配置服务端, 请使用: \033[41;37m ${0} reconfig \033[0m"
-	echo -e "更新服务端, 请使用: \033[41;37m ${0} update \033[0m"
-	echo -e "卸载服务端, 请使用: \033[41;37m ${0} uninstall \033[0m"
-	echo
-	echo "欢迎访问扩软博客: https://blog.kuoruan.com/"
-	echo
-	echo "我们的QQ群: 43391448"
-	echo
-	echo "尽情使用吧！"
-	echo
 }
 
 # Download init script
@@ -737,8 +708,56 @@ function cleanup(){
 	rm -f /usr/share/kcptun/client_"$FILE_SUFFIX"
 }
 
+function show_config_info(){
+	local kcptun_client_args="-r \"${IP}:${kcptunport}\" -l \":8388\""
+	[ -n "$kcptunpwd" ] && kcptun_client_args="${kcptun_client_args} --key \"${kcptunpwd}\""
+	[ -n "$crypt_methods" ] && kcptun_client_args="${kcptun_client_args} --crypt ${crypt_methods}"
+	[ -n "$comm_mode" ] && kcptun_client_args="${kcptun_client_args} --mode ${comm_mode}"
+	[ -n "$nocomp" ] && kcptun_client_args="${kcptun_client_args} --nocomp"
+	[ -n "$datashard_value" ] && kcptun_client_args="${kcptun_client_args} --datashard ${datashard_value}"
+	[ -n "$parityshard_value" ] && kcptun_client_args="${kcptun_client_args} --parityshard ${parityshard_value}"
+	[ -n "$dscp_value" ] && kcptun_client_args="${kcptun_client_args} --dscp ${dscp_value}"
+
+	echo -e "服务器IP: \033[41;37m ${IP} \033[0m"
+	echo -e "端口: \033[41;37m ${kcptunport} \033[0m"
+	echo -e "加速地址: ${forwardip}:${forwardport}"
+	[ -n "$kcptunpwd" ] && echo -e "密码: \033[41;37m ${kcptunpwd} \033[0m"
+	[ -n "$crypt_methods" ] && echo -e "加密方式 Crypt: \033[41;37m ${crypt_methods} \033[0m"
+	[ -n "$comm_mode" ] && echo -e "加速模式 Mode: \033[41;37m ${comm_mode} \033[0m"
+	[ -n "$mtu_value" ] && echo -e "MTU: \033[41;37m ${mtu_value} \033[0m"
+	[ -n "$sndwnd_value" ] && echo -e "发送窗口大小 Sndwnd: \033[41;37m ${sndwnd_value} \033[0m"
+	[ -n "$rcvwnd_value" ] && echo -e "接受窗口大小 Rcvwnd: \033[41;37m ${rcvwnd_value} \033[0m"
+	[ -n "$nocomp" ] && echo -e "数据压缩: \033[41;37m 已禁用 \033[0m"
+	[ -n "$datashard_value" ] && echo -e "前向纠错 Datashard: \033[41;37m ${datashard_value} \033[0m"
+	[ -n "$parityshard_value" ] && echo -e "前向纠错 Parityshard: \033[41;37m ${parityshard_value} \033[0m"
+	[ -n "$dscp_value" ] && echo -e "差分服务代码点 DSCP: \033[41;37m ${dscp_value} \033[0m"
+	echo
+	echo "推荐的客户端参数为: "
+	echo -e "\033[41;37m ${kcptun_client_args} \033[0m"
+	echo
+	echo "其他参数请自行计算或设置, 详细信息可以查看: https://github.com/xtaci/kcptun"
+	echo
+	echo -e "Kcptun 目录: \033[41;37m /usr/share/kcptun \033[0m"
+	echo -e "Kcptun 日志文件: \033[41;37m /var/log/kcptun.log \033[0m"
+	echo
+	echo "Supervisor 的相关命令有: service supervisord {start|stop|restart|status}"
+	echo "kcptun Server 的相关命令有: supervisorctl {start|stop|restart|status} kcptun"
+	echo "已将 Supervisor 加入开机自启, Kcptun Server 会随 Supervisor 的启动而启动"
+	echo
+	echo -e "如需重新配置服务端, 请使用: \033[41;37m ${0} reconfig \033[0m"
+	echo -e "更新服务端, 请使用: \033[41;37m ${0} update \033[0m"
+	echo -e "卸载服务端, 请使用: \033[41;37m ${0} uninstall \033[0m"
+	echo
+	echo "欢迎访问扩软博客: https://blog.kuoruan.com/"
+	echo
+	echo "我们的QQ群: 43391448"
+	echo
+	echo "尽情使用吧！"
+	echo
+}
+
 # Install Kcptun
-function install_kcptun() {
+function install_kcptun(){
 	checkos
 	rootness
 	disable_selinux
@@ -777,7 +796,7 @@ function check_update(){
 	[ -z "$new_shell_version" ] && new_shell_version=0
 	if [ "$new_shell_version" -gt "$SHELL_VERSION" ]; then
 		local change_log=`echo "$VERSION_CONTENT" | jq -r ".change_log"`
-		echo "发现脚本文件更新 (版本号: ${new_shell_version})"
+		echo "发现安装脚本文件更新 (版本号: ${new_shell_version})"
 		echo -e "更新说明: \n${change_log}"
 		echo
 		echo "按任意键开始更新, 或者 Ctrl+C 取消"
@@ -795,7 +814,7 @@ function check_update(){
 			rm -f "$shell_path".bak
 			clear
 			echo
-			echo "脚本已更新, 正在运行新的脚本..."
+			echo "安装脚本已更新到 v${new_init_version}, 正在运行新的脚本..."
 			echo
 
 			$shell_path update
@@ -837,7 +856,12 @@ function check_update(){
 	local new_config_version=`echo "$VERSION_CONTENT" | jq -r ".config_version" | grep -oE "[0-9]+"`
 	[ -z "$new_config_version" ] && new_config_version=0
 	if [ "$new_config_version" -gt "$CONFIG_VERSION" ]; then
-		echo "发现配置更新, 需要重新设置 Kcptun..."
+		local config_change_log=`echo "$VERSION_CONTENT" | jq -r ".config_change_log"`
+		echo "发现 Kcptun 配置更新 (版本号: ${new_config_version}), 需要重新设置 Kcptun..."
+		echo -e "更新说明: \n${config_change_log}"
+		echo
+		echo "按任意键开始配置, 或者 Ctrl+C 取消"
+		click_to_continue
 		reconfig_kcptun
 		sed -i "s/CONFIG_VERSION=${CONFIG_VERSION}/CONFIG_VERSION=${new_config_version}/" "$shell_path"
 	fi
@@ -845,7 +869,13 @@ function check_update(){
 	local new_init_version=`echo "$VERSION_CONTENT" | jq -r ".init_version" | grep -oE "[0-9]+"`
 	[ -z "$new_init_version" ] && new_init_version=0
 	if [ "$new_init_version" -gt "$INIT_VERSION" ]; then
-		echo "发现服务启动脚本存在更新, 正在自动更新..."
+		local init_change_log=`echo "$VERSION_CONTENT" | jq -r ".init_change_log"`
+		echo "发现服务启动脚本文件更新 (版本号: ${new_init_version})"
+		echo -e "更新说明: \n${init_change_log}"
+		echo
+		echo "按任意键开始更新, 或者 Ctrl+C 取消"
+		click_to_continue
+		echo "正在自动更新启动脚本..."
 		checkos
 		downlod_init_script
 		sed -i "s/INIT_VERSION=${INIT_VERSION}/INIT_VERSION=${new_init_version}/" "$shell_path"
@@ -915,6 +945,6 @@ case "$action" in
 		;;
 	*)
 		echo "参数错误！ [${action}]"
-		echo "请使用: `basename $0` {install|uninstall|update|reconfig}"
+		echo "请使用: $0 {install|uninstall|update|reconfig}"
 		;;
 esac
