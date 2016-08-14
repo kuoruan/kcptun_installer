@@ -811,6 +811,7 @@ function check_update(){
 		else
 			chmod a+x "$shell_path"
 			sed -ri "s/CONFIG_VERSION=[0-9]+/CONFIG_VERSION=${CONFIG_VERSION}/" "$shell_path"
+			sed -ri "s/INIT_VERSION=[0-9]+/INIT_VERSION=${INIT_VERSION}/" "$shell_path"
 			rm -f "$shell_path".bak
 			clear
 			echo
