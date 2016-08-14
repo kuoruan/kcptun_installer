@@ -19,7 +19,7 @@ COM
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 
-SHELL_VERSION=4
+SHELL_VERSION=5
 CONFIG_VERSION=2
 INIT_VERSION=1
 
@@ -613,9 +613,8 @@ function pre_install(){
 		echo "安装 Supervisor 失败！"
 		exit_shell
 	fi
-
-	[ -f /etc/supervisor/supervisord.conf ] || echo_supervisord_conf > /etc/supervisor/supervisord.conf
 	mkdir -p /etc/supervisor/conf.d
+	[ -f /etc/supervisor/supervisord.conf ] || echo_supervisord_conf > /etc/supervisor/supervisord.conf
 	cd $CUR_DIR
 }
 
