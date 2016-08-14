@@ -1,5 +1,13 @@
 #! /bin/bash
 #
+# chkconfig:    345 83 04
+# description: Supervisor is a client/server system that allows \
+#   its users to monitor and control a number of processes on \
+#   UNIX-like operating systems.
+# processname: supervisord
+# config: /etc/supervisor/supervisord.conf
+# pidfile: /var/run/supervisord.pid
+#
 ### BEGIN INIT INFO
 # Provides: supervisord
 # Required-Start: $all
