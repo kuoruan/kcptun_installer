@@ -796,18 +796,18 @@ function check_update(){
 	[ -z "$new_shell_version" ] && new_shell_version=0
 	if [ "$new_shell_version" -gt "$SHELL_VERSION" ]; then
 		local change_log=`echo "$VERSION_CONTENT" | jq -r ".change_log"`
-		echo "发现安装脚本文件更新 (版本号: ${new_shell_version})"
+		echo "发现安装脚本更新 (版本号: ${new_shell_version})"
 		echo -e "更新说明: \n${change_log}"
 		echo
 		echo "按任意键开始更新, 或者 Ctrl+C 取消"
 		click_to_continue
-		echo "正在更新脚本文件..."
+		echo "正在更新安装脚本..."
 		local new_shell_url=`echo "$VERSION_CONTENT" | jq -r ".shell_url"`
 		mv -f $shell_path "$shell_path".bak
 
 		if ! wget --no-check-certificate -O "$shell_path" "$new_shell_url"; then
 			mv -f "$shell_path".bak $shell_path
-			echo "更新脚本失败..."
+			echo "更新安装脚本失败..."
 		else
 			chmod a+x "$shell_path"
 			sed -ri "s/CONFIG_VERSION=[0-9]+/CONFIG_VERSION=${CONFIG_VERSION}/" "$shell_path"
@@ -821,6 +821,8 @@ function check_update(){
 			$shell_path update
 			exit 0
 		fi
+	else
+		echo "未发现安装脚本更新..."
 	fi
 
 	local kcptun_server=/usr/share/kcptun/server_"$FILE_SUFFIX"
@@ -865,6 +867,8 @@ function check_update(){
 		click_to_continue
 		reconfig_kcptun
 		sed -i "s/CONFIG_VERSION=${CONFIG_VERSION}/CONFIG_VERSION=${new_config_version}/" "$shell_path"
+	else
+		echo "未发现 Kcptun 配置更新..."
 	fi
 
 	local new_init_version=`echo "$VERSION_CONTENT" | jq -r ".init_version" | grep -oE "[0-9]+"`
@@ -883,6 +887,8 @@ function check_update(){
 		echo
 		echo "服务启动脚本已更新到 v${new_init_version}, 可能需要重启服务器才能生效！"
 		echo
+	else
+		echo "未发现服务启动脚本更新..."
 	fi
 }
 
