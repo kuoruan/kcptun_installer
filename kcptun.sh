@@ -603,7 +603,7 @@ function pre_install(){
 			apt-get -y update
 			apt-get -y install curl wget jq python-setuptools
 			if [ $? -ne 0 ]; then
-				echo "安装依耐软件包失败！"
+				echo "安装依赖软件包失败！"
 				exit_shell
 			fi
 		fi
