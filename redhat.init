@@ -25,19 +25,19 @@
 # and short-form for messages.
 SUPERVISORCTL=/usr/bin/supervisorctl
 SUPERVISORD=/usr/bin/supervisord
-PROG=supervisord
+NAME=supervisord
 PIDFILE=/var/run/supervisord.pid
-STOP_TIMEOUT=60
+STOP_TIMEOUT=10
 OPTIONS="-c /etc/supervisor/supervisord.conf"
 RETVAL=0
 
 do_start() {
-    if status -p ${PIDFILE} $SUPERVISORD >&/dev/null; then
-        echo "$PROG is already running."
+    if status -p $PIDFILE $SUPERVISORD >&/dev/null; then
+        echo "$NAME is already running."
         RETVAL=0
     else
-        echo -n $"Starting $PROG: "
-        daemon --pidfile=${PIDFILE} $SUPERVISORD $OPTIONS -j ${PIDFILE}
+        echo -n $"Starting $NAME: "
+        daemon --pidfile=$PIDFILE $SUPERVISORD $OPTIONS -j $PIDFILE
         RETVAL=$?
         echo
         [ $RETVAL -eq 0 ] && $SUPERVISORCTL $OPTIONS status
@@ -46,20 +46,20 @@ do_start() {
 }
 
 do_stop() {
-    if status -p ${PIDFILE} $SUPERVISORD >&/dev/null; then
-        echo -n $"Stopping $PROG: "
-        killproc -p ${PIDFILE} -d ${STOP_TIMEOUT} $SUPERVISORD
+    if status -p $PIDFILE $SUPERVISORD >&/dev/null; then
+        echo -n $"Stopping $NAME: "
+        killproc -p $PIDFILE -d $STOP_TIMEOUT $SUPERVISORD
         RETVAL=$?
         echo
-        [ $RETVAL -eq 0 ] && rm -rf ${PIDFILE}
+        [ $RETVAL -eq 0 ] && rm -rf $PIDFILE
     else
-        echo "$PROG is not running."
+        echo "$NAME is not running."
         RETVAL=0
     fi
 }
 
 chk_status() {
-    status -p ${PIDFILE} $SUPERVISORD
+    status -p $PIDFILE $SUPERVISORD
     RETVAL=$?
     [ $RETVAL -eq 0 ] && $SUPERVISORCTL $OPTIONS status
 }
@@ -79,7 +79,7 @@ case "$1" in
         do_start
         ;;
     *)
-        echo $"Usage: /etc/init.d/$PROG {start|stop|restart|status}"
+        echo $"Usage: /etc/init.d/$NAME {start|stop|restart|status}"
         RETVAL=2
         ;;
 esac

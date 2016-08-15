@@ -13,28 +13,24 @@
 
 . /lib/lsb/init-functions
 
+# Include supervisor defaults if available
+if [ -f /etc/default/supervisor ] ; then
+    . /etc/default/supervisor
+fi
+
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-DAEMON=/usr/local/bin/supervisord
+SUPERVISORD=/usr/local/bin/supervisord
 SUPERVISORCTL=/usr/local/bin/supervisorctl
 NAME=supervisord
-DAEMON_OPTS="-c /etc/supervisor/supervisord.conf"
+PIDFILE=/var/run/supervisord.pid
+OPTIONS="-c /etc/supervisor/supervisord.conf"
+STOP_TIMEOUT=10
+RETVAL=0
 
 SCRIPT_OK=0
 SCRIPT_ERROR=1
-RETVAL=0
 
-test -x $DAEMON || exit 0
-
-PIDFILE=/var/run/$NAME.pid
-DODTIME=5   # Time to wait for the server to die, in seconds
-            # If this value is set too low you might not
-            # let some servers to die gracefully and
-            # 'restart' will not work
-
-# Include supervisor defaults if available
-if [ -f /etc/default/supervisor ] ; then
-	. /etc/default/supervisor
-fi
+test -x $SUPERVISORD || exit 0
 
 running_pid() {
     # Check if a given process pid's cmdline matches a given name
@@ -54,7 +50,7 @@ running() {
     [ ! -f "$PIDFILE" ] && return 1
     # Obtain the pid and check it against the binary name
     pid=`cat $PIDFILE`
-    running_pid $pid $DAEMON || return 1
+    running_pid $pid $SUPERVISORD || return 1
     return 0
 }
 
@@ -67,11 +63,11 @@ do_start() {
         RETVAL=0
     else
         start-stop-daemon --start --quiet --pidfile $PIDFILE \
-            --startas $DAEMON -- $DAEMON_OPTS -j $PIDFILE
+            --startas $SUPERVISORD -- $OPTIONS -j $PIDFILE
         test -f $PIDFILE || sleep 1
         if running ; then
             log_end_msg $SCRIPT_OK
-            $SUPERVISORCTL $DAEMON_OPTS status
+            $SUPERVISORCTL $OPTIONS status
             RETVAL=0
         else
             log_end_msg $SCRIPT_ERROR
@@ -83,7 +79,7 @@ do_start() {
 do_stop() {
     log_daemon_msg "Stopping $NAME: "
     if running ; then
-        start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
+        start-stop-daemon --stop --retry TERM/$STOP_TIMEOUT/KILL/5 --quiet --oknodo --pidfile $PIDFILE
         log_end_msg $SCRIPT_OK
         RETVAL=0
     else
@@ -97,7 +93,7 @@ chk_status() {
     echo -n "$NAME is "
     if running ;  then
         echo "running."
-        $SUPERVISORCTL $DAEMON_OPTS status
+        $SUPERVISORCTL $OPTIONS status
         RETVAL=0
     else
         echo "not running."
@@ -108,7 +104,7 @@ chk_status() {
 case "$1" in
     start)
         do_start
-	   ;;
+        ;;
     stop)
         do_stop
         ;;
