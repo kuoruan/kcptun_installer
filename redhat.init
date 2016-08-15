@@ -27,8 +27,8 @@ SUPERVISORCTL=/usr/bin/supervisorctl
 SUPERVISORD=/usr/bin/supervisord
 NAME=supervisord
 PIDFILE=/var/run/supervisord.pid
-STOP_TIMEOUT=10
 OPTIONS="-c /etc/supervisor/supervisord.conf"
+STOP_TIMEOUT=10
 RETVAL=0
 
 do_start() {
