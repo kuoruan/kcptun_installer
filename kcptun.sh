@@ -686,7 +686,7 @@ function config_kcptun(){
 		# sed -i 's/^\[include\]$/&\nfiles = \/etc\/supervisor\/conf.d\/\*\.conf/;t;$a [include]\nfiles = /etc/supervisor/conf.d/*.conf' /etc/supervisor/supervisord.conf
 
 		if ! grep -q "^files\s*=\s*\/etc\/supervisor\/conf\.d\/\*\.conf$" /etc/supervisor/supervisord.conf; then
-			if grep -q "^\[include\]$" /etc/supervisor/superisord.conf; then
+			if grep -q "^\[include\]$" /etc/supervisor/supervisord.conf; then
 				sed -i '/^\[include\]$/a files = \/etc\/supervisor\/conf.d\/\*\.conf' /etc/supervisor/supervisord.conf
 			else
 				sed -i '$a [include]\nfiles = /etc/supervisor/conf.d/*.conf' /etc/supervisor/supervisord.conf
@@ -951,6 +951,7 @@ function uninstall_kcptun(){
 	rootness
 	echo "是否卸载 Kcptun Server? 按任意键继续...或者 Ctrl+C 取消"
 	click_to_continue
+	echo
 	echo "正在卸载 Kcptun 并取消 Supervisor 的开机启动..."
 	supervisorctl stop kcptun
 	service supervisord stop
