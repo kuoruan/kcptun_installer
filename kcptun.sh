@@ -589,6 +589,7 @@ function set_config(){
 function pre_install(){
 	# Install necessary dependencies
 	if [ "$OS" == 'CentOS' ]; then
+		yum --disablerepo=epel -y update ca-certificates
 		yum install -y epel-release
 		yum --enablerepo=epel install -y curl wget jq python-setuptools
 	else
