@@ -1,1 +1,9 @@
-{"shell_version": 5, "shell_url": "https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.sh", "change_log": "1.修复Ubuntu上安装失败的问题;\n2.安装前检测是否已存在安装;\n3.完善逻辑, 不再强制覆盖已存在的Supervisor配置文件;\n4.更新服务启动脚本之后需要重启服务器", "config_version": 2, "config_change_log": "无", "init_version": 2, "init_change_log": "1.重写Ubuntu和Debian的启动脚本;\n2.顺带重写了CentOS的启动脚本;\n3.如果出现无法启动或者关闭的情况, 请反馈给我"}
+{
+	"shell_version": 6,
+	"shell_url": "https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.sh",
+	"change_log": "1.添加新的加密方式;\n2.仅当设置为本地IP时才检测加速端口;\n3.添加手动挡模式, 可配置手动挡参数;\n4.将参数都改为单短横线, 节约空间;\n5.更新配置时清空以前的日志;\n6.将脚本更名为 Kcptun 服务端安装脚本, 以区别于 kcp-server",
+	"config_version": 3,
+	"config_change_log": "1.添加了许多新的加密方式, 推荐 salsa20 轻量快速;\n2.加速模式可选手动, 并添加了预设参数选项",
+	"init_version": 2,
+	"init_change_log": "1.重写Ubuntu和Debian的启动脚本;\n2.顺带重写了CentOS的启动脚本;\n3.如果出现无法启动或者关闭的情况, 请反馈给我"
+}

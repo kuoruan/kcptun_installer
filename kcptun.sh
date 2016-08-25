@@ -19,15 +19,15 @@ COM
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 
-SHELL_VERSION=5
-CONFIG_VERSION=2
-INIT_VERSION=1
+SHELL_VERSION=6
+CONFIG_VERSION=3
+INIT_VERSION=2
 
 clear
 echo
 echo "#############################################################"
-echo "# Kcptun Server 一键安装脚本                                #"
-echo "# 该脚本支持 Kcptun Server 的安装、更新、卸载及配置         #"
+echo "# Kcptun 服务端一键安装脚本                                #"
+echo "# 该脚本支持 Kcptun 服务端的安装、更新、卸载及配置         #"
 echo "# 官方网站: https://blog.kuoruan.com/                       #"
 echo "# 作者: Index <kuoruan@gmail.com>                           #"
 echo "# 致谢: 脚本编写过程中参考了 @teddysun 的SS一键安装脚本     #"
@@ -113,7 +113,7 @@ function disable_selinux(){
 # Exit shell
 function exit_shell(){
 	echo
-	echo "Kcptun Server 安装失败！"
+	echo "Kcptun 服务端安装失败！"
 	echo "希望你能记录下错误信息, 然后将错误信息发送给我"
 	echo "我的邮箱: kuoruan@gmail.com"
 	echo "欢迎加入我们的QQ群: 43391448"
@@ -137,7 +137,7 @@ function click_to_continue(){
 
 check_install() {
 	if [ -f /etc/supervisor/supervisord.conf -a -d /usr/share/kcptun/ ]; then
-		echo "似乎你曾经安装过 Kcptun Server"
+		echo "似乎你曾经安装过 Kcptun 服务端"
 		echo
 		while true
 		do
@@ -149,7 +149,7 @@ check_install() {
 			echo "(5) 退出"
 			read -p "(请选择 [1~5], 默认: 覆盖安装):" sel
 			if [ -z "$sel" ]; then
-				echo "开始覆盖安装 Kcptun Server..."
+				echo "开始覆盖安装 Kcptun 服务端..."
 				echo
 				return
 			else
@@ -157,7 +157,7 @@ check_install() {
 				if [ $? -eq 0 ]; then
 					case $sel in
 						1)
-							echo "开始覆盖安装 Kcptun Server..."
+							echo "开始覆盖安装 Kcptun 服务端..."
 							echo
 							return
 							;;
@@ -199,7 +199,7 @@ function set_config(){
 	# Set Kcptun config port
 	while true
 	do
-		echo -e "请输入 Kcptun Server 端口 [1-65535]:"
+		echo -e "请输入 Kcptun 服务端运行端口 [1-65535]:"
 		read -p "(默认: 554):" kcptunport
 		[ -z "$kcptunport" ] && kcptunport="554"
 		expr $kcptunport + 0 &>/dev/null
@@ -252,13 +252,15 @@ function set_config(){
 		expr $forwardport + 0 &>/dev/null
 		if [ $? -eq 0 ]; then
 			if [ $forwardport -ge 1 ] && [ $forwardport -le 65535 ]; then
-				port_stat=`netstat -an | grep -E "[0-9:]:${forwardport} .+LISTEN"`
-				if [ -z "$port_stat" ]; then
-					read -p "当前没有软件使用此端口, 确定加速此端口?(y/n)" yn
-					case ${yn:0:1} in
-						y|Y) ;;
-						*) continue;;
-					esac
+				if [ "$forwardip" == '127.0.0.1' ]; then
+					port_stat=`netstat -an | grep -E "[0-9:]:${forwardport} .+LISTEN"`
+					if [ -z "$port_stat" ]; then
+						read -p "当前没有软件使用此端口, 确定加速此端口?(y/n):" yn
+						case ${yn:0:1} in
+							y|Y) ;;
+							*) continue;;
+						esac
+					fi
 				fi
 				echo
 				echo "---------------------------"
@@ -292,14 +294,22 @@ function set_config(){
 	do
 		echo "请选择加密方式:"
 		echo "(1) aes"
-		echo "(2) tea"
-		echo "(3) xor"
-		echo "(4) none"
-		read -p "(请选择 [1~4], 默认: aes):" sel
+		echo "(2) aes-128"
+		echo "(3) aes-192"
+		echo "(4) salsa20"
+		echo "(5) blowfish"
+		echo "(6) twofish"
+		echo "(7) cast5"
+		echo "(8) 3des"
+		echo "(9) tea"
+		echo "(10) xtea"
+		echo "(11) xor"
+		echo "(12) none"
+		read -p "(请选择 [1~12], 默认: aes):" sel
 		if [ -z "$sel" ]; then
 			echo
 			echo "-----------------------------"
-			echo "将使用默认加密方式"
+			echo "加密方式 = aes"
 			echo "-----------------------------"
 			echo
 			break
@@ -308,11 +318,19 @@ function set_config(){
 			if [ $? -eq 0 ]; then
 				case $sel in
 					1) crypt_methods="aes";;
-					2) crypt_methods="tea";;
-					3) crypt_methods="xor";;
-					4) crypt_methods="none";;
+					2) crypt_methods="aes-128";;
+					3) crypt_methods="aes-192";;
+					4) crypt_methods="salsa20";;
+					5) crypt_methods="blowfish";;
+					6) crypt_methods="twofish";;
+					7) crypt_methods="cast5";;
+					8) crypt_methods="3des";;
+					9) crypt_methods="tea";;
+					10) crypt_methods="xtea";;
+					11) crypt_methods="xor";;
+					12) crypt_methods="none";;
 					*)
-						echo "请输入有效数字(1~4)！"
+						echo "请输入有效数字(1~12)！"
 						continue;;
 				esac
 				echo
@@ -335,11 +353,12 @@ function set_config(){
 		echo "(2) fast2"
 		echo "(3) fast"
 		echo "(4) normal"
-		read -p "(请选择 [1~4], 默认: fast):" sel
+		echo "(5) manual (手动挡)"
+		read -p "(请选择 [1~5], 默认: fast):" sel
 		if [ -z "$sel" ]; then
 			echo
 			echo "---------------------------"
-			echo "将使用默认加速模式"
+			echo "加速模式 = fast"
 			echo "---------------------------"
 			echo
 			break
@@ -351,6 +370,7 @@ function set_config(){
 					2) comm_mode="fast2";;
 					3) comm_mode="fast";;
 					4) comm_mode="normal";;
+					5) comm_mode="manual";;
 					*)
 						echo "请输入有效数字(1~4)！"
 						continue;;
@@ -367,6 +387,56 @@ function set_config(){
 		fi
 	done
 
+	if [ "$comm_mode" == 'manual' ]; then
+		while true
+		do
+			echo "请设置手动挡参数 (预设选项或手动配置):"
+			echo "(1) 策略1: 通过超时重传＋快速重传, 响应速度优先 (最大化响应时间, 适用于网页访问)"
+			echo "(2) 策略2-1: 仅仅通过超时重传, 带宽效率优先 (有效载比优先, 适用于视频观看)"
+			echo "(3) 策略2-2: 同上, 与 策略2-1 参数略不相同"
+			echo "(4) 策略3: 尽可能通过 FEC 纠删, 最大化传输速度 (较为中庸, 兼顾网页和视频)"
+			echo "(5) 手动输入参数 (小白慎用, 需要理解 KCP 协议)"
+			read -p "(请选择 [1~5], 默认: 策略3):" sel
+			if [ -z "$sel" ]; then
+				echo
+				echo "---------------------------"
+				echo "手动挡参数: 策略3"
+				echo "---------------------------"
+				echo
+				break
+			else
+				expr $sel + 0 &> /dev/null
+				if [ $? -eq 0 ]; then
+					case $sel in
+						1) manual_param="-nodelay 1 -resend 2 -nc 1 -interval 20";;
+						2) manual_param="-nodelay 1 -resend 0 -nc 1 -interval 40";;
+						3) manual_param="-nodelay 0 -resend 0 -nc 1 -interval 20";;
+						4)
+							manual_param="-nodelay 0 -resend 0 -nc 1 -interval 40 -datashard 5 -parityshard 2"
+							reed_solomon="false";;
+						5)
+							while true
+							do
+								read -p "请输入手动挡参数(各项参数之间用空格隔开):" manual_param
+								[ -n "$manual_param" ] && break || echo "手动参数不能为空！"
+							done;;
+						*)
+							echo "请输入有效数字(1~5)！"
+							continue;;
+					esac
+					echo
+					echo "---------------------------"
+					echo "手动挡参数 = $manual_param"
+					echo "---------------------------"
+					echo
+					break
+				else
+					echo "输入有误, 请输入数字！"
+				fi
+			fi
+		done
+	fi
+
 	while true
 	do
 		echo "请设置 UDP 数据包的 MTU (最大传输单元)值:"
@@ -374,7 +444,7 @@ function set_config(){
 		if [ -z "$mtu_value" ]; then
 			echo
 			echo "---------------------------"
-			echo "MTU 将使用默认值"
+			echo "MTU = 1350"
 			echo "---------------------------"
 			echo
 			break
@@ -404,7 +474,7 @@ function set_config(){
 		if [ -z "$sndwnd_value" ]; then
 			echo
 			echo "---------------------------"
-			echo "Sndwnd 将使用默认值"
+			echo "Sndwnd = 1024"
 			echo "---------------------------"
 			echo
 			break
@@ -434,7 +504,7 @@ function set_config(){
 		if [ -z "$rcvwnd_value" ]; then
 			echo
 			echo "---------------------------"
-			echo "Rcvwnd 将使用默认值"
+			echo "Rcvwnd = 1024"
 			echo "---------------------------"
 			echo
 			break
@@ -459,7 +529,7 @@ function set_config(){
 
 	while true
 	do
-		read -p "是否禁用数据压缩? (默认: 不禁用) (y/n)):" yn
+		read -p "禁用数据压缩? (默认: 不禁用) (y/n):" yn
 		[ -z "$yn" ] && yn="n"
 		case ${yn:0:1} in
 			y|Y) nocomp="y";;
@@ -480,65 +550,67 @@ function set_config(){
 		break
 	done
 
-	while true
-	do
-		echo "请设置前向纠错 Datashard:"
-		read -p "(默认: 10):" datashard_value
-		if [ -z "$datashard_value" ]; then
-			echo
-			echo "---------------------------"
-			echo "Datashard 将使用默认值"
-			echo "---------------------------"
-			echo
-			break
-		else
-			expr $datashard_value + 0 &> /dev/null
-			if [ $? -eq 0 ]; then
-				if [ $datashard_value -gt 0 ]; then
-					echo
-					echo "---------------------------"
-					echo "Datashard = $datashard_value"
-					echo "---------------------------"
-					echo
-					break
-				else
-					echo "请输入正数！"
-				fi
+	if [ -z "$reed_solomon" ]; then
+		while true
+		do
+			echo "请设置前向纠错 Datashard:"
+			read -p "(默认: 10):" datashard_value
+			if [ -z "$datashard_value" ]; then
+				echo
+				echo "---------------------------"
+				echo "Datashard = 10"
+				echo "---------------------------"
+				echo
+				break
 			else
-				echo "输入有误, 请输入数字！"
+				expr $datashard_value + 0 &> /dev/null
+				if [ $? -eq 0 ]; then
+					if [ $datashard_value -gt 0 ]; then
+						echo
+						echo "---------------------------"
+						echo "Datashard = $datashard_value"
+						echo "---------------------------"
+						echo
+						break
+					else
+						echo "请输入正数！"
+					fi
+				else
+					echo "输入有误, 请输入数字！"
+				fi
 			fi
-		fi
-	done
+		done
 
-	while true
-	do
-		echo "请设置前向纠错 Parityshard:"
-		read -p "(默认: 3):" parityshard_value
-		if [ -z "$parityshard_value" ]; then
-			echo
-			echo "---------------------------"
-			echo "Parityshard 将使用默认值"
-			echo "---------------------------"
-			echo
-			break
-		else
-			expr $parityshard_value + 0 &> /dev/null
-			if [ $? -eq 0 ]; then
-				if [ $parityshard_value -gt 0 ]; then
-					echo
-					echo "---------------------------"
-					echo "Parityshard = $parityshard_value"
-					echo "---------------------------"
-					echo
-					break
-				else
-					echo "请输入正数！"
-				fi
+		while true
+		do
+			echo "请设置前向纠错 Parityshard:"
+			read -p "(默认: 3):" parityshard_value
+			if [ -z "$parityshard_value" ]; then
+				echo
+				echo "---------------------------"
+				echo "Parityshard = 3"
+				echo "---------------------------"
+				echo
+				break
 			else
-				echo "输入有误, 请输入数字！"
+				expr $parityshard_value + 0 &> /dev/null
+				if [ $? -eq 0 ]; then
+					if [ $parityshard_value -gt 0 ]; then
+						echo
+						echo "---------------------------"
+						echo "Parityshard = $parityshard_value"
+						echo "---------------------------"
+						echo
+						break
+					else
+						echo "请输入正数！"
+					fi
+				else
+					echo "输入有误, 请输入数字！"
+				fi
 			fi
-		fi
-	done
+		done
+	fi
 
 	while true
 	do
@@ -547,7 +619,7 @@ function set_config(){
 		if [ -z "$dscp_value" ]; then
 			echo
 			echo "---------------------------"
-			echo "DSCP 将使用默认值"
+			echo "DSCP = 0"
 			echo "---------------------------"
 			echo
 			break
@@ -569,16 +641,17 @@ function set_config(){
 	done
 
 	KCPTUN_SERVER_ARGS="-t \"${forwardip}:${forwardport}\" -l \":${kcptunport}\""
-	[ -n "$kcptunpwd" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} --key \"${kcptunpwd}\""
-	[ -n "$crypt_methods" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} --crypt ${crypt_methods}"
-	[ -n "$comm_mode" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} --mode ${comm_mode}"
-	[ -n "$mtu_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} --mtu ${mtu_value}"
-	[ -n "$sndwnd_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} --sndwnd ${sndwnd_value}"
-	[ -n "$rcvwnd_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} --rcvwnd ${rcvwnd_value}"
-	[ -n "$nocomp" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} --nocomp"
-	[ -n "$datashard_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} --datashard ${datashard_value}"
-	[ -n "$parityshard_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} --parityshard ${parityshard_value}"
-	[ -n "$dscp_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} --dscp ${dscp_value}"
+	[ -n "$kcptunpwd" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} -key \"${kcptunpwd}\""
+	[ -n "$crypt_methods" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} -crypt ${crypt_methods}"
+	[ -n "$comm_mode" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} -mode ${comm_mode}"
+	[ -n "$manual_param" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} ${manual_param}"
+	[ -n "$mtu_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} -mtu ${mtu_value}"
+	[ -n "$sndwnd_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} -sndwnd ${sndwnd_value}"
+	[ -n "$rcvwnd_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} -rcvwnd ${rcvwnd_value}"
+	[ -n "$nocomp" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} -nocomp"
+	[ -n "$datashard_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} -datashard ${datashard_value}"
+	[ -n "$parityshard_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} -parityshard ${parityshard_value}"
+	[ -n "$dscp_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS} -dscp ${dscp_value}"
 
 	echo
 	echo "配置设置完成, 按任意键继续...或者 Ctrl+C 取消"
@@ -746,7 +819,7 @@ init_service(){
 		supervisorctl restart kcptun
 
 		if [ $? -ne 0 ]; then
-			echo "启动 Kcptun Server 失败！"
+			echo "启动 Kcptun 服务端失败！"
 			exit_shell
 		fi
 	fi
@@ -762,13 +835,14 @@ function cleanup(){
 
 function show_config_info(){
 	local kcptun_client_args="-r \"${IP}:${kcptunport}\" -l \":8388\""
-	[ -n "$kcptunpwd" ] && kcptun_client_args="${kcptun_client_args} --key \"${kcptunpwd}\""
-	[ -n "$crypt_methods" ] && kcptun_client_args="${kcptun_client_args} --crypt ${crypt_methods}"
-	[ -n "$comm_mode" ] && kcptun_client_args="${kcptun_client_args} --mode ${comm_mode}"
-	[ -n "$nocomp" ] && kcptun_client_args="${kcptun_client_args} --nocomp"
-	[ -n "$datashard_value" ] && kcptun_client_args="${kcptun_client_args} --datashard ${datashard_value}"
-	[ -n "$parityshard_value" ] && kcptun_client_args="${kcptun_client_args} --parityshard ${parityshard_value}"
-	[ -n "$dscp_value" ] && kcptun_client_args="${kcptun_client_args} --dscp ${dscp_value}"
+	[ -n "$kcptunpwd" ] && kcptun_client_args="${kcptun_client_args} -key \"${kcptunpwd}\""
+	[ -n "$crypt_methods" ] && kcptun_client_args="${kcptun_client_args} -crypt ${crypt_methods}"
+	[ -n "$comm_mode" ] && kcptun_client_args="${kcptun_client_args} -mode ${comm_mode}"
+	[ -n "$manual_param" ] && kcptun_client_args="${kcptun_client_args} ${manual_param}"
+	[ -n "$nocomp" ] && kcptun_client_args="${kcptun_client_args} -nocomp"
+	[ -n "$datashard_value" ] && kcptun_client_args="${kcptun_client_args} -datashard ${datashard_value}"
+	[ -n "$parityshard_value" ] && kcptun_client_args="${kcptun_client_args} -parityshard ${parityshard_value}"
+	[ -n "$dscp_value" ] && kcptun_client_args="${kcptun_client_args} -dscp ${dscp_value}"
 
 	echo -e "服务器IP: \033[41;37m ${IP} \033[0m"
 	echo -e "端口: \033[41;37m ${kcptunport} \033[0m"
@@ -776,6 +850,7 @@ function show_config_info(){
 	[ -n "$kcptunpwd" ] && echo -e "密码: \033[41;37m ${kcptunpwd} \033[0m"
 	[ -n "$crypt_methods" ] && echo -e "加密方式 Crypt: \033[41;37m ${crypt_methods} \033[0m"
 	[ -n "$comm_mode" ] && echo -e "加速模式 Mode: \033[41;37m ${comm_mode} \033[0m"
+	[ -n "$manual_param" ] && echo -e "手动挡参数: \033[41;37m ${manual_param} \033[0m"
 	[ -n "$mtu_value" ] && echo -e "MTU: \033[41;37m ${mtu_value} \033[0m"
 	[ -n "$sndwnd_value" ] && echo -e "发送窗口大小 Sndwnd: \033[41;37m ${sndwnd_value} \033[0m"
 	[ -n "$rcvwnd_value" ] && echo -e "接受窗口大小 Rcvwnd: \033[41;37m ${rcvwnd_value} \033[0m"
@@ -792,9 +867,9 @@ function show_config_info(){
 	echo -e "Kcptun 目录: \033[41;37m /usr/share/kcptun \033[0m"
 	echo -e "Kcptun 日志文件: \033[41;37m /var/log/kcptun.log \033[0m"
 	echo
-	echo "Supervisor 的相关命令有: service supervisord {start|stop|restart|status}"
-	echo "kcptun Server 的相关命令有: supervisorctl {start|stop|restart|status} kcptun"
-	echo "已将 Supervisor 加入开机自启, Kcptun Server 会随 Supervisor 的启动而启动"
+	echo "Supervisor {启动|关闭|重启|查看状态} 命令: service supervisord {start|stop|restart|status}"
+	echo "kcptun 服务端 {启动|关闭|重启|查看状态} 命令: supervisorctl {start|stop|restart|status} kcptun"
+	echo "已将 Supervisor 加入开机自启, Kcptun 服务端会随 Supervisor 的启动而启动"
 	echo
 	echo -e "如需重新配置服务端, 请使用: \033[41;37m ${0} reconfig \033[0m"
 	echo -e "更新服务端, 请使用: \033[41;37m ${0} update \033[0m"
@@ -831,7 +906,7 @@ function install_kcptun(){
 
 		clear
 		echo
-		echo "恭喜, Kcptun Server 安装成功！"
+		echo "恭喜, Kcptun 服务端安装成功！"
 		show_config_info
 	else
 		exit_shell
@@ -881,7 +956,7 @@ function check_update(){
 	local kcptun_server=/usr/share/kcptun/server_"$FILE_SUFFIX"
 	if [ -f $kcptun_server ]; then
 		chmod a+x "$kcptun_server"
-		local local_kcptun_version=`$kcptun_server --version | grep -oE "[0-9]+"`
+		local local_kcptun_version=`$kcptun_server -version | grep -oE "[0-9]+"`
 		local remote_kcptun_version=`echo "$KCPTUN_CONTENT" | jq -r ".tag_name" | grep -oE "[0-9]+"`
 		[ -z "$remote_kcptun_version" ] && remote_kcptun_version=0
 		if [ "$remote_kcptun_version" -gt "$local_kcptun_version" ]; then
@@ -899,14 +974,14 @@ function check_update(){
 				supervisorctl restart kcptun
 				cleanup
 				echo
-				echo "Kcptun Server 已更新到 v${remote_kcptun_version}, 请手动更新客户端！"
+				echo "Kcptun 服务端已更新到 v${remote_kcptun_version}, 请手动更新客户端！"
 				echo
 			fi
 		else
 			echo "未发现 Kcptun 更新..."
 		fi
 	else
-		echo "未找到已安装的 Kcptun Server 执行文件, 或许你并没有安装 Kcptun?"
+		echo "未找到已安装的 Kcptun 服务端执行文件, 或许你并没有安装 Kcptun?"
 	fi
 
 	local new_config_version=`echo "$VERSION_CONTENT" | jq -r ".config_version" | grep -oE "[0-9]+"`
@@ -950,10 +1025,10 @@ function check_update(){
 
 function uninstall_kcptun(){
 	rootness
-	echo "是否卸载 Kcptun Server? 按任意键继续...或者 Ctrl+C 取消"
+	echo "是否卸载 Kcptun 服务端? 按任意键继续...或者 Ctrl+C 取消"
 	click_to_continue
 	echo
-	echo "正在卸载 Kcptun 并取消 Supervisor 的开机启动..."
+	echo "正在卸载 Kcptun 服务端并取消 Supervisor 的开机启动..."
 	supervisorctl stop kcptun
 	service supervisord stop
 	checkos
@@ -965,16 +1040,18 @@ function uninstall_kcptun(){
 
 	rm -f /etc/supervisor/conf.d/kcptun.conf
 	rm -rf /usr/share/kcptun/
-	echo "Kcptun Server 卸载完成！欢迎再次使用。"
+	echo "Kcptun 服务端卸载完成！欢迎再次使用。"
 }
 
 function reconfig_kcptun(){
 	rootness
-	echo "开始重新配置 Kcptun Server..."
+	echo "开始重新配置 Kcptun 服务端..."
 	set_config
 	get_machine_type
 	echo "正在写入新的配置..."
 	config_kcptun
+
+	touch /var/log/kcptun.log && echo > /var/log/kcptun.log
 
 	if [ -f /etc/init.d/supervisord ]; then
 		service supervisord restart
@@ -985,9 +1062,9 @@ function reconfig_kcptun(){
 			echo "自动重启 Kcptun 失败, 请手动检查！"
 		fi
 	else
-		echo "未找到 Supervisor 服务, 无法重启 Kcptun Server, 请手动检查！"
+		echo "未找到 Supervisor 服务, 无法重启 Kcptun 服务端, 请手动检查！"
 	fi
-	echo "恭喜, Kcptun Server 配置完毕！"
+	echo "恭喜, Kcptun 服务端配置完毕！"
 	show_config_info
 }
 
