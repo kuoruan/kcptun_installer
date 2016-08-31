@@ -19,8 +19,8 @@ COM
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 
-SHELL_VERSION=6
-CONFIG_VERSION=3
+SHELL_VERSION=7
+CONFIG_VERSION=4
 INIT_VERSION=2
 
 clear
@@ -639,7 +639,7 @@ function set_config(){
 
     KCPTUN_SERVER_ARGS="{\n\t\"listen\": \":${kcptunport}\",\n\t\"target\": \"${forwardip}:${forwardport}\""
 
-    [ -n "$kcptunpwd" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"key\": \"${kcptunpwd}\","
+    [ -n "$kcptunpwd" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"key\": \"${kcptunpwd}\""
     [ -n "$crypt_methods" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"tcrypt\": \"${crypt_methods}\""
     [ -n "$comm_mode" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"mode\": \"${comm_mode}\""
     [ -n "$mtu_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"mtu\": ${mtu_value}"
@@ -834,7 +834,7 @@ function cleanup(){
 }
 
 function show_config_info(){
-    local kcptun_client_args="{\n\t\"localaddr\": \":{forwardport}\",\n\t\"remoteaddr\": \"${IP}:${kcptunport}\""
+    local kcptun_client_args="{\n\t\"localaddr\": \":${forwardport}\",\n\t\"remoteaddr\": \"${IP}:${kcptunport}\""
     [ -n "$kcptunpwd" ] && kcptun_client_args="${kcptun_client_args},\n\t\"key\": \"${kcptunpwd}\""
     [ -n "$crypt_methods" ] && kcptun_client_args="${kcptun_client_args},\n\t\"crypt\": \"${crypt_methods}\""
     [ -n "$comm_mode" ] && kcptun_client_args="${kcptun_client_args},\n\t\"mode\": \"${comm_mode}\""
@@ -861,7 +861,7 @@ function show_config_info(){
     [ -n "$dscp_value" ] && echo -e "差分服务代码点 DSCP: \033[41;37m ${dscp_value} \033[0m"
     echo
     echo "推荐的客户端配置文件为: "
-    echo -e "\033[41;37m ${kcptun_client_args} \033[0m"
+    echo -e "${kcptun_client_args}"
     echo
     echo "其他参数请自行计算或设置, 详细信息可以查看: https://github.com/xtaci/kcptun"
     echo
