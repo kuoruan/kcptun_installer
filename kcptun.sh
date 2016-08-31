@@ -331,7 +331,8 @@ function set_config(){
                     12) crypt_methods="none";;
                     *)
                         echo "请输入有效数字(1~12)！"
-                        continue;;
+                        continue
+                        ;;
                 esac
                 echo
                 echo "-----------------------------"
@@ -423,7 +424,7 @@ function set_config(){
                 esac
                 echo
                 echo "---------------------------"
-                echo "手动挡参数 = $param_name"
+                echo "手动挡参数使用$param_name"
                 echo "---------------------------"
                 echo
                 break
@@ -470,7 +471,7 @@ function set_config(){
         if [ -z "$sndwnd_value" ]; then
             echo
             echo "---------------------------"
-            echo "Sndwnd = 1024"
+            echo "sndwnd = 1024"
             echo "---------------------------"
             echo
             break
@@ -480,7 +481,7 @@ function set_config(){
                 if [ $sndwnd_value -gt 0 ]; then
                     echo
                     echo "---------------------------"
-                    echo "Sndwnd = $sndwnd_value"
+                    echo "sndwnd = $sndwnd_value"
                     echo "---------------------------"
                     echo
                     break
@@ -500,7 +501,7 @@ function set_config(){
         if [ -z "$rcvwnd_value" ]; then
             echo
             echo "---------------------------"
-            echo "Rcvwnd = 1024"
+            echo "rcvwnd = 1024"
             echo "---------------------------"
             echo
             break
@@ -510,7 +511,7 @@ function set_config(){
                 if [ $rcvwnd_value -gt 0 ]; then
                     echo
                     echo "---------------------------"
-                    echo "Rcvwnd = $rcvwnd_value"
+                    echo "rcvwnd = $rcvwnd_value"
                     echo "---------------------------"
                     echo
                     break
@@ -526,12 +527,12 @@ function set_config(){
     if [ -z "$reed_solomon" ]; then
         while true
         do
-            echo "请设置前向纠错 Datashard:"
+            echo "请设置前向纠错 datashard:"
             read -p "(默认: 10):" datashard_value
             if [ -z "$datashard_value" ]; then
                 echo
                 echo "---------------------------"
-                echo "Datashard = 10"
+                echo "datashard = 10"
                 echo "---------------------------"
                 echo
                 break
@@ -541,7 +542,7 @@ function set_config(){
                     if [ $datashard_value -gt 0 ]; then
                         echo
                         echo "---------------------------"
-                        echo "Datashard = $datashard_value"
+                        echo "datashard = $datashard_value"
                         echo "---------------------------"
                         echo
                         break
@@ -556,12 +557,12 @@ function set_config(){
 
         while true
         do
-            echo "请设置前向纠错 Parityshard:"
+            echo "请设置前向纠错 parityshard:"
             read -p "(默认: 3):" parityshard_value
             if [ -z "$parityshard_value" ]; then
                 echo
                 echo "---------------------------"
-                echo "Parityshard = 3"
+                echo "parityshard = 3"
                 echo "---------------------------"
                 echo
                 break
@@ -571,7 +572,7 @@ function set_config(){
                     if [ $parityshard_value -gt 0 ]; then
                         echo
                         echo "---------------------------"
-                        echo "Parityshard = $parityshard_value"
+                        echo "parityshard = $parityshard_value"
                         echo "---------------------------"
                         echo
                         break
@@ -619,20 +620,24 @@ function set_config(){
         [ -z "$yn" ] && yn="n"
         case ${yn:0:1} in
             y|Y) nocomp="true";;
-            n|N) nocomp="false";;
+            n|N) nocomp="";;
             *)
                 echo "输入有误, 请重新输入！"
                 continue;;
         esac
         echo
         echo "---------------------------"
-        echo "nocomp = $nocomp"
+        if [ "$nocomp" == "true" ]; then
+            echo "数据压缩将被禁用！"
+        else
+            echo "将启用数据压缩！"
+        fi
         echo "---------------------------"
         echo
         break
     done
 
-    KCPTUN_SERVER_ARGS="{\n\t\"listen\": \"${kcptunport}\",\n\t\"target\": \"${forwardip}:${forwardport}\""
+    KCPTUN_SERVER_ARGS="{\n\t\"listen\": \":${kcptunport}\",\n\t\"target\": \"${forwardip}:${forwardport}\""
 
     [ -n "$kcptunpwd" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"key\": \"${kcptunpwd}\","
     [ -n "$crypt_methods" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"tcrypt\": \"${crypt_methods}\""
@@ -644,8 +649,8 @@ function set_config(){
     [ -n "$parityshard_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"parityshard\": ${parityshard_value}"
     [ -n "$dscp_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"dscp\": ${dscp_value}"
     [ -n "$manual_param" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t${manual_param}"
+    [ -n "$nocomp" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"nocomp\": ${nocomp}"
 
-    KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"nocomp\": ${nocomp}"
     KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS}\n}"
 
     echo
@@ -829,15 +834,17 @@ function cleanup(){
 }
 
 function show_config_info(){
-    local kcptun_client_args="-r \"${IP}:${kcptunport}\" -l \":{forwardport}\""
-    [ -n "$kcptunpwd" ] && kcptun_client_args="${kcptun_client_args} -key \"${kcptunpwd}\""
-    [ -n "$crypt_methods" ] && kcptun_client_args="${kcptun_client_args} -crypt ${crypt_methods}"
-    [ -n "$comm_mode" ] && kcptun_client_args="${kcptun_client_args} -mode ${comm_mode}"
-    [ -n "$manual_param" ] && kcptun_client_args="${kcptun_client_args} ${manual_param}"
-    [ -n "$nocomp" ] && kcptun_client_args="${kcptun_client_args} -nocomp"
-    [ -n "$datashard_value" ] && kcptun_client_args="${kcptun_client_args} -datashard ${datashard_value}"
-    [ -n "$parityshard_value" ] && kcptun_client_args="${kcptun_client_args} -parityshard ${parityshard_value}"
-    [ -n "$dscp_value" ] && kcptun_client_args="${kcptun_client_args} -dscp ${dscp_value}"
+    local kcptun_client_args="{\n\t\"localaddr\": \":{forwardport}\",\n\t\"remoteaddr\": \"${IP}:${kcptunport}\""
+    [ -n "$kcptunpwd" ] && kcptun_client_args="${kcptun_client_args},\n\t\"key\": \"${kcptunpwd}\""
+    [ -n "$crypt_methods" ] && kcptun_client_args="${kcptun_client_args},\n\t\"crypt\": \"${crypt_methods}\""
+    [ -n "$comm_mode" ] && kcptun_client_args="${kcptun_client_args},\n\t\"mode\": \"${comm_mode}\""
+    [ -n "$datashard_value" ] && kcptun_client_args="${kcptun_client_args},\n\t\"datashard\": ${datashard_value}"
+    [ -n "$parityshard_value" ] && kcptun_client_args="${kcptun_client_args},\n\t\"parityshard\": ${parityshard_value}"
+    [ -n "$dscp_value" ] && kcptun_client_args="${kcptun_client_args},\n\t\"dscp\": ${dscp_value}"
+    [ -n "$manual_param" ] && kcptun_client_args="${kcptun_client_args},\n\t\"${manual_param}"
+    [ -n "$nocomp" ] && kcptun_client_args="${kcptun_client_args},\n\t\"nocomp\": ${nocomp}"
+
+    kcptun_client_args="${kcptun_client_args}\n}"
 
     echo -e "服务器IP: \033[41;37m ${IP} \033[0m"
     echo -e "端口: \033[41;37m ${kcptunport} \033[0m"
@@ -845,7 +852,6 @@ function show_config_info(){
     [ -n "$kcptunpwd" ] && echo -e "密码: \033[41;37m ${kcptunpwd} \033[0m"
     [ -n "$crypt_methods" ] && echo -e "加密方式 Crypt: \033[41;37m ${crypt_methods} \033[0m"
     [ -n "$comm_mode" ] && echo -e "加速模式 Mode: \033[41;37m ${comm_mode} \033[0m"
-    [ -n "$manual_param" ] && echo -e "手动挡参数: \033[41;37m ${manual_param} \033[0m"
     [ -n "$mtu_value" ] && echo -e "MTU: \033[41;37m ${mtu_value} \033[0m"
     [ -n "$sndwnd_value" ] && echo -e "发送窗口大小 Sndwnd: \033[41;37m ${sndwnd_value} \033[0m"
     [ -n "$rcvwnd_value" ] && echo -e "接受窗口大小 Rcvwnd: \033[41;37m ${rcvwnd_value} \033[0m"
@@ -854,7 +860,7 @@ function show_config_info(){
     [ -n "$parityshard_value" ] && echo -e "前向纠错 Parityshard: \033[41;37m ${parityshard_value} \033[0m"
     [ -n "$dscp_value" ] && echo -e "差分服务代码点 DSCP: \033[41;37m ${dscp_value} \033[0m"
     echo
-    echo "推荐的客户端参数为: "
+    echo "推荐的客户端配置文件为: "
     echo -e "\033[41;37m ${kcptun_client_args} \033[0m"
     echo
     echo "其他参数请自行计算或设置, 详细信息可以查看: https://github.com/xtaci/kcptun"
