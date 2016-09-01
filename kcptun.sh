@@ -640,7 +640,7 @@ function set_config(){
     KCPTUN_SERVER_ARGS="{\n\t\"listen\": \":${kcptunport}\",\n\t\"target\": \"${forwardip}:${forwardport}\""
 
     [ -n "$kcptunpwd" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"key\": \"${kcptunpwd}\""
-    [ -n "$crypt_methods" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"tcrypt\": \"${crypt_methods}\""
+    [ -n "$crypt_methods" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"crypt\": \"${crypt_methods}\""
     [ -n "$comm_mode" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"mode\": \"${comm_mode}\""
     [ -n "$mtu_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"mtu\": ${mtu_value}"
     [ -n "$sndwnd_value" ] && KCPTUN_SERVER_ARGS="${KCPTUN_SERVER_ARGS},\n\t\"sndwnd\": ${sndwnd_value}"
