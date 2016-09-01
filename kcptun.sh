@@ -767,6 +767,8 @@ function config_kcptun(){
             fi
         fi
 
+        # make dir
+        [ -d /usr/share/kcptun/ ] || mkdir -p /usr/share/kcptun/
         touch /usr/share/kcptun/server-config.json
         echo -e "${KCPTUN_SERVER_ARGS}" > /usr/share/kcptun/server-config.json
 
@@ -921,8 +923,7 @@ function install_kcptun(){
     get_machine_type
     download_file
     config_kcptun
-    # make dir
-    mkdir -p /usr/share/kcptun/
+
     tar -zxf kcptun-"$SPRUCE_TYPE".tar.gz -C /usr/share/kcptun/
 
     server_file=/usr/share/kcptun/server_"$FILE_SUFFIX"
