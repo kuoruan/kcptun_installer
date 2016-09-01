@@ -19,7 +19,7 @@ COM
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 
-SHELL_VERSION=7
+SHELL_VERSION=8
 CONFIG_VERSION=4
 INIT_VERSION=2
 
@@ -767,6 +767,9 @@ function config_kcptun(){
             fi
         fi
 
+        touch /usr/share/kcptun/server-config.json
+        echo -e "${KCPTUN_SERVER_ARGS}" > /usr/share/kcptun/server-config.json
+
         cat > /etc/supervisor/conf.d/kcptun.conf<<-EOF
 [program:kcptun]
 directory=/usr/share/kcptun
@@ -778,7 +781,6 @@ stdout_logfile=/var/log/kcptun.log
 stdout_logfile_maxbytes=1MB
 stdout_logfile_backups=0
 EOF
-        echo -e "${KCPTUN_SERVER_ARGS}" > /usr/share/kcptun/server-config.json
     else
         echo "未找到 Supervisor 配置文件！"
         exit_shell
