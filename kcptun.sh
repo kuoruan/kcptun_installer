@@ -202,7 +202,7 @@ function set_config(){
         echo -e "请输入 Kcptun 服务端运行端口 [1-65535]:"
         read -p "(默认: 554):" kcptunport
         [ -z "$kcptunport" ] && kcptunport="554"
-        expr $kcptunport + 0 &>/dev/null
+        expr $kcptunport + 1 &>/dev/null
         if [ $? -eq 0 ]; then
             if [ $kcptunport -ge 1 ] && [ $kcptunport -le 65535 ]; then
                 port_stat=`netstat -an | grep -E "[0-9:]:${kcptunport} .+LISTEN"`
@@ -249,7 +249,7 @@ function set_config(){
         echo -e "请输入需要加速的端口 [1-65535]:"
         read -p "(默认: 8388):" forwardport
         [ -z "$forwardport" ] && forwardport="8388"
-        expr $forwardport + 0 &>/dev/null
+        expr $forwardport + 1 &>/dev/null
         if [ $? -eq 0 ]; then
             if [ $forwardport -ge 1 ] && [ $forwardport -le 65535 ]; then
                 if [ "$forwardip" == '127.0.0.1' ]; then
@@ -314,7 +314,7 @@ function set_config(){
             echo
             break
         else
-            expr $sel + 0 &> /dev/null
+            expr $sel + 1 &> /dev/null
             if [ $? -eq 0 ]; then
                 case $sel in
                     1) crypt_methods="aes";;
@@ -364,7 +364,7 @@ function set_config(){
             echo
             break
         else
-            expr $sel + 0 &> /dev/null
+            expr $sel + 1 &> /dev/null
             if [ $? -eq 0 ]; then
                 case $sel in
                     1) comm_mode="fast3";;
@@ -398,7 +398,7 @@ function set_config(){
             echo "(4) 策略3: 尽可能通过 FEC 纠删, 最大化传输速度 (较为中庸, 兼顾网页和视频)"
             read -p "(请选择 [1~4], 默认: 策略3):" sel
             [ -z "$sel" ] && sel="3"
-            expr $sel + 0 &> /dev/null
+            expr $sel + 1 &> /dev/null
             if [ $? -eq 0 ]; then
                 case $sel in
                     1)
@@ -446,7 +446,7 @@ function set_config(){
             echo
             break
         else
-            expr $mtu_value + 0 &> /dev/null
+            expr $mtu_value + 1 &> /dev/null
             if [ $? -eq 0 ]; then
                 if [ $mtu_value -gt 0 ]; then
                     echo
@@ -476,7 +476,7 @@ function set_config(){
             echo
             break
         else
-            expr $sndwnd_value + 0 &> /dev/null
+            expr $sndwnd_value + 1 &> /dev/null
             if [ $? -eq 0 ]; then
                 if [ $sndwnd_value -gt 0 ]; then
                     echo
@@ -506,7 +506,7 @@ function set_config(){
             echo
             break
         else
-            expr $rcvwnd_value + 0 &> /dev/null
+            expr $rcvwnd_value + 1 &> /dev/null
             if [ $? -eq 0 ]; then
                 if [ $rcvwnd_value -gt 0 ]; then
                     echo
@@ -598,9 +598,9 @@ function set_config(){
             echo
             break
         else
-            expr $dscp_value + 0 &> /dev/null
+            expr $dscp_value + 1 &> /dev/null
             if [ $? -eq 0 ]; then
-                if [ $dscp_value -gt 0 ]; then
+                if [ $dscp_value -ge 0 ]; then
                     echo
                     echo "---------------------------"
                     echo "DSCP = $dscp_value"
@@ -609,7 +609,7 @@ function set_config(){
                     break
                 fi
             else
-                echo "输入有误, 请输入大于0的数字, 或直接回车！"
+                echo "输入有误, 请输入数字！"
             fi
         fi
     done
