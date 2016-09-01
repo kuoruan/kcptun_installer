@@ -537,9 +537,9 @@ function set_config(){
                 echo
                 break
             else
-                expr $datashard_value + 0 &> /dev/null
+                expr $datashard_value + 1 &> /dev/null
                 if [ $? -eq 0 ]; then
-                    if [ $datashard_value -gt 0 ]; then
+                    if [ $datashard_value -ge 0 ]; then
                         echo
                         echo "---------------------------"
                         echo "datashard = $datashard_value"
@@ -547,7 +547,7 @@ function set_config(){
                         echo
                         break
                     else
-                        echo "请输入正数！"
+                        echo "请输入大于等于0的数字！"
                     fi
                 else
                     echo "输入有误, 请输入数字！"
@@ -567,9 +567,9 @@ function set_config(){
                 echo
                 break
             else
-                expr $parityshard_value + 0 &> /dev/null
+                expr $parityshard_value + 1 &> /dev/null
                 if [ $? -eq 0 ]; then
-                    if [ $parityshard_value -gt 0 ]; then
+                    if [ $parityshard_value -ge 0 ]; then
                         echo
                         echo "---------------------------"
                         echo "parityshard = $parityshard_value"
@@ -577,7 +577,7 @@ function set_config(){
                         echo
                         break
                     else
-                        echo "请输入正数！"
+                        echo "请输入大于等于0的数字！"
                     fi
                 else
                     echo "输入有误, 请输入数字！"
