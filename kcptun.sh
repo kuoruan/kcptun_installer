@@ -424,7 +424,7 @@ function set_config(){
                 esac
                 echo
                 echo "---------------------------"
-                echo "手动挡参数使用$param_name"
+                echo "手动挡参数使用 ${param_name}"
                 echo "---------------------------"
                 echo
                 break
@@ -835,14 +835,35 @@ function cleanup(){
 
 function show_config_info(){
     local kcptun_client_args="{\n\t\"localaddr\": \":${forwardport}\",\n\t\"remoteaddr\": \"${IP}:${kcptunport}\""
-    [ -n "$kcptunpwd" ] && kcptun_client_args="${kcptun_client_args},\n\t\"key\": \"${kcptunpwd}\""
-    [ -n "$crypt_methods" ] && kcptun_client_args="${kcptun_client_args},\n\t\"crypt\": \"${crypt_methods}\""
-    [ -n "$comm_mode" ] && kcptun_client_args="${kcptun_client_args},\n\t\"mode\": \"${comm_mode}\""
-    [ -n "$datashard_value" ] && kcptun_client_args="${kcptun_client_args},\n\t\"datashard\": ${datashard_value}"
-    [ -n "$parityshard_value" ] && kcptun_client_args="${kcptun_client_args},\n\t\"parityshard\": ${parityshard_value}"
-    [ -n "$dscp_value" ] && kcptun_client_args="${kcptun_client_args},\n\t\"dscp\": ${dscp_value}"
+    local kcptun_mobile_args=""
+    [ -n "$kcptunpwd" ] && {
+        kcptun_client_args="${kcptun_client_args},\n\t\"key\": \"${kcptunpwd}\""
+        kcptun_mobile_args="${kcptun_mobile_args} -key \"${kcptunpwd}\""
+    }
+    [ -n "$crypt_methods" ] && {
+        kcptun_client_args="${kcptun_client_args},\n\t\"crypt\": \"${crypt_methods}\""
+        kcptun_mobile_args="${kcptun_mobile_args} -crypt \"${crypt_methods}\""
+    }
+    [ -n "$comm_mode" ] && {
+        kcptun_client_args="${kcptun_client_args},\n\t\"mode\": \"${comm_mode}\""
+    }
+    [ -n "$datashard_value" ] && {
+        kcptun_client_args="${kcptun_client_args},\n\t\"datashard\": ${datashard_value}"
+        kcptun_mobile_args="${kcptun_mobile_args} -datashard ${datashard_value}"
+    }
+    [ -n "$parityshard_value" ] && {
+        kcptun_client_args="${kcptun_client_args},\n\t\"parityshard\": ${parityshard_value}"
+        kcptun_mobile_args="${kcptun_mobile_args} -parityshard ${parityshard_value}"
+    }
+    [ -n "$dscp_value" ] && {
+        kcptun_client_args="${kcptun_client_args},\n\t\"dscp\": ${dscp_value}"
+        kcptun_mobile_args="${kcptun_mobile_args} -dscp ${dscp_value}"
+    }
     [ -n "$manual_param" ] && kcptun_client_args="${kcptun_client_args},\n\t\"${manual_param}"
-    [ -n "$nocomp" ] && kcptun_client_args="${kcptun_client_args},\n\t\"nocomp\": ${nocomp}"
+    [ -n "$nocomp" ] && {
+        kcptun_client_args="${kcptun_client_args},\n\t\"nocomp\": ${nocomp}"
+        kcptun_mobile_args="${kcptun_mobile_args} -nocomp"
+    }
 
     kcptun_client_args="${kcptun_client_args}\n}"
 
@@ -863,18 +884,20 @@ function show_config_info(){
     echo "推荐的客户端配置文件为: "
     echo -e "${kcptun_client_args}"
     echo
+    echo "手机端参数可以使用："
+    echo -e "${kcptun_mobile_args}"
+    echo
     echo "其他参数请自行计算或设置, 详细信息可以查看: https://github.com/xtaci/kcptun"
     echo
-    echo -e "Kcptun 目录: \033[41;37m /usr/share/kcptun \033[0m"
-    echo -e "Kcptun 日志文件: \033[41;37m /var/log/kcptun.log \033[0m"
+    echo -e "Kcptun 目录: /usr/share/kcptun"
+    echo -e "Kcptun 配置文件: /usr/share/kcptun/server-config.json"
+    echo -e "Kcptun 日志文件: /var/log/kcptun.log"
     echo
     echo "Supervisor {启动|关闭|重启|查看状态} 命令: service supervisord {start|stop|restart|status}"
     echo "kcptun 服务端 {启动|关闭|重启|查看状态} 命令: supervisorctl {start|stop|restart|status} kcptun"
     echo "已将 Supervisor 加入开机自启, Kcptun 服务端会随 Supervisor 的启动而启动"
     echo
-    echo -e "如需重新配置服务端, 请使用: \033[41;37m ${0} reconfig \033[0m"
-    echo -e "更新服务端, 请使用: \033[41;37m ${0} update \033[0m"
-    echo -e "卸载服务端, 请使用: \033[41;37m ${0} uninstall \033[0m"
+    echo -e "如需 {重新配置|更新|卸载} 服务端, 请使用: ${0} {reconfig|update|uninstall}"
     echo
     echo "欢迎访问扩软博客: https://blog.kuoruan.com/"
     echo
@@ -1041,6 +1064,7 @@ function uninstall_kcptun(){
 
     rm -f /etc/supervisor/conf.d/kcptun.conf
     rm -rf /usr/share/kcptun/
+    rm -f /var/log/kcptun.log
     echo "Kcptun 服务端卸载完成！欢迎再次使用。"
 }
 
