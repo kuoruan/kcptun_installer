@@ -1260,7 +1260,7 @@ function check_update() {
             echo
             echo "安装脚本已更新到 v${new_shell_version}, 正在运行新的脚本..."
 
-            $shell_path update
+            bash $shell_path update
             exit $SUCCESS
         } || {
             mv -f "$shell_path".bak $shell_path
