@@ -39,7 +39,7 @@ echo
 CUR_DIR=`pwd`
 
 # Get public IP address
-IP=$(ip addr | egrep -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | egrep -v "^192\.168|^172\.1[6-9]\.|^172\.2[0-9]\.|^172\.3[0-2]\.|^10\.|^127\.|^255\.|^0\." | head -n 1)
+IP=$(ip addr | grep -Eo '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | grep -Ev "^192\.168|^172\.1[6-9]\.|^172\.2[0-9]\.|^172\.3[0-2]\.|^10\.|^127\.|^255\.|^0\." | head -n 1)
 [ -z "$IP" ] && IP=$(wget -qO- -t1 -T2 ipv4.icanhazip.com)
 
 # Make sure only root can run our script
@@ -694,12 +694,15 @@ function pre_install(){
 
 # Get json contnet
 function get_json_content(){
-    KCPTUN_CONTENT=`curl -sfk https://api.github.com/repos/xtaci/kcptun/releases/latest`
-    VERSION_CONTENT=`curl -sfk https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.json`
+    KCPTUN_CONTENT=`curl --silent --insecure --fail https://api.github.com/repos/xtaci/kcptun/releases/latest`
+    VERSION_CONTENT=`curl --silent --insecure --fail https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.json`
     if [ -z "$KCPTUN_CONTENT" ]; then
         echo "获取 Kcptun 文件信息失败, 请检查你的网络连接！"
         exit_shell
+    else
+        REMOTE_KCPTUN_VERSION=`echo "$KCPTUN_CONTENT" | jq -r ".tag_name" | grep -oE "[0-9]+"`
     fi
+
     [ -z "$VERSION_CONTENT" ] && VERSION_CONTENT="{}"
 }
 
@@ -791,7 +794,7 @@ EOF
 
 # Download init script
 downlod_init_script() {
-    if [ "$OS" == 'CentOS' ]; then
+    if [ "$OS" == "CentOS" ]; then
         init_file_url="https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/redhat.init"
     else
         init_file_url="https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/ubuntu.init"
@@ -839,7 +842,7 @@ function cleanup(){
 
 function show_config_info(){
     local kcptun_client_args="{\n\t\"localaddr\": \":${forwardport}\",\n\t\"remoteaddr\": \"${IP}:${kcptunport}\""
-    local kcptun_mobile_args=""
+    local kcptun_mobile_args="-autoexpire 60"
     [ -n "$kcptunpwd" ] && {
         kcptun_client_args="${kcptun_client_args},\n\t\"key\": \"${kcptunpwd}\""
         kcptun_mobile_args="${kcptun_mobile_args} -key \"${kcptunpwd}\""
@@ -889,7 +892,7 @@ function show_config_info(){
     echo -e "${kcptun_client_args}"
     echo
     echo "手机端参数可以使用："
-    echo -e "${kcptun_mobile_args}"
+    echo -e "$kcptun_mobile_args"
     echo
     echo "其他参数请自行计算或设置, 详细信息可以查看: https://github.com/xtaci/kcptun"
     echo
@@ -950,7 +953,6 @@ function check_update(){
     local new_shell_version=`echo "$VERSION_CONTENT" | jq -r ".shell_version" | grep -oE "[0-9]+"`
     [ -z "$new_shell_version" ] && new_shell_version=0
     if [ "$new_shell_version" -gt "$SHELL_VERSION" ]; then
-        local change_log=`echo "$VERSION_CONTENT" | jq -r ".change_log"`
         echo "发现安装脚本更新 (版本号: ${new_shell_version})"
         echo -e "更新说明: \n${change_log}"
         echo
@@ -984,11 +986,11 @@ function check_update(){
     if [ -f $kcptun_server ]; then
         chmod a+x "$kcptun_server"
         local local_kcptun_version=`$kcptun_server -version | grep -oE "[0-9]+"`
-        local remote_kcptun_version=`echo "$KCPTUN_CONTENT" | jq -r ".tag_name" | grep -oE "[0-9]+"`
-        [ -z "$remote_kcptun_version" ] && remote_kcptun_version=0
-        if [ "$remote_kcptun_version" -gt "$local_kcptun_version" ]; then
+
+        [ -z "$REMOTE_KCPTUN_VERSION" ] && REMOTE_KCPTUN_VERSION=0
+        if [ "$REMOTE_KCPTUN_VERSION" -gt "$local_kcptun_version" ]; then
             local kcptun_version_desc=`echo "$KCPTUN_CONTENT" | jq -r ".name"`
-            echo "发现 Kcptun 新版本 (v${remote_kcptun_version})"
+            echo "发现 Kcptun 新版本 (v${REMOTE_KCPTUN_VERSION})"
             echo -e "更新说明: \n${kcptun_version_desc}"
             echo
             echo "按任意键开始更新, 或者 Ctrl+C 取消"
@@ -1001,7 +1003,7 @@ function check_update(){
                 supervisorctl restart kcptun
                 cleanup
                 echo
-                echo "Kcptun 服务端已更新到 v${remote_kcptun_version}, 请手动更新客户端！"
+                echo "Kcptun 服务端已更新到 v${REMOTE_KCPTUN_VERSION}, 请手动更新客户端！"
                 echo
             fi
         else
