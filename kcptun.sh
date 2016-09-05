@@ -140,7 +140,9 @@ function get_arch() {
 
 # 获取服务器的IP地址
 function get_server_ip() {
-	SERVER_IP=$(ip addr | grep -Eo "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" | grep -Ev "^192\.168|^172\.1[6-9]\.|^172\.2[0-9]\.|^172\.3[0-2]\.|^10\.|^127\.|^255\.|^0\." | head -n 1) || \
+    SERVER_IP=$(ip addr | grep -Eo "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" | \
+        grep -Ev "^192\.168|^172\.1[6-9]\.|^172\.2[0-9]\.|^172\.3[0-2]\.|^10\.|^127\.|^255\.|^0\." | \
+        head -n 1) || \
     SERVER_IP=$(wget -q -O - ipv4.icanhazip.com)
 }
 
@@ -205,7 +207,7 @@ function installed_check() {
             echo "(6) 手动输入版本安装"
             echo "(7) 卸载"
             echo "(8) 退出"
-            read -p "(请选择 [1~8], 默认: 1):" sel
+            read -p "(请选择 [1~8], 默认: 1): " sel
             echo
             [ -z "$sel" ] && sel=1 || expr $sel + 0 &>/dev/null
 
@@ -253,7 +255,7 @@ function set_kcptun_config() {
     while :
     do
         echo
-        echo -e "请输入 Kcptun 服务端运行端口 [1-65535]:"
+        echo -e "请输入 Kcptun 服务端运行端口 [1-65535]: "
         read -p "(默认: $D_PORT):" kcptun_port
         echo
         [ -z "$kcptun_port" ] && kcptun_port=$D_PORT || expr $kcptun_port + 1 &>/dev/null
@@ -281,7 +283,7 @@ function set_kcptun_config() {
     while :
     do
         echo
-        read -p "是否禁用 IPv6? (默认: 不禁用) (y/n):" yn
+        read -p "是否禁用 IPv6? (默认: 不禁用) (y/n): " yn
         echo
         [ -n "$yn" ] && {
             case ${yn:0:1} in
@@ -302,7 +304,7 @@ function set_kcptun_config() {
     while :
     do
         echo
-        echo -e "请输入需要加速的 IP [0.0.0.0 ~ 255.255.255.255]:"
+        echo -e "请输入需要加速的 IP [0.0.0.0 ~ 255.255.255.255]: "
         read -p "(默认: $D_TARGET_IP):" target_ip
         echo
         [ -z "$target_ip" ] && target_ip=$D_TARGET_IP || echo "$target_ip" | \
@@ -322,7 +324,7 @@ function set_kcptun_config() {
     while :
     do
         echo
-        echo -e "请输入需要加速的端口 [1-65535]:"
+        echo -e "请输入需要加速的端口 [1-65535]: "
         read -p "(默认: $D_TARGET_PORT):" target_port
         echo
         [ -z "$target_port" ] && target_port=$D_TARGET_PORT || expr $target_port + 1 &>/dev/null
@@ -332,7 +334,7 @@ function set_kcptun_config() {
 
                 if [ "$target_ip" = "$D_TARGET_IP" ]; then
                     $(netstat -an | grep -qE "[0-9:]:${target_port} .+LISTEN") || {
-                        read -p "当前没有软件使用此端口, 确定加速此端口?(y/n):" yn
+                        read -p "当前没有软件使用此端口, 确定加速此端口?(y/n): " yn
                         case ${yn:0:1} in
                             y|Y) :;;
                             *  ) continue;;
@@ -355,7 +357,7 @@ function set_kcptun_config() {
     # 设置 Kcptun 密码
     echo
     echo "请输入 Kcptun 密码:"
-    read -p "(如果不想使用密码请留空):" kcptun_pwd
+    read -p "(如果不想使用密码请留空): " kcptun_pwd
     echo
     echo "---------------------------"
     [ -z "$kcptun_pwd" ] && echo "未设置密码" || echo "密码 = $kcptun_pwd"
@@ -378,7 +380,7 @@ function set_kcptun_config() {
         echo "(10) xtea"
         echo "(11) xor"
         echo "(12) none"
-        read -p "(请选择 [1~12], 默认: $D_CRYPT):" sel
+        read -p "(请选择 [1~12], 默认: $D_CRYPT): " sel
         echo
         [ -z "$sel" ] && sel=1 || expr $sel + 1 &>/dev/null
 
@@ -410,7 +412,7 @@ function set_kcptun_config() {
         fi
     done
 
-    # Set mode for communication
+    # 设置加速模式
     while :
     do
         echo
@@ -420,7 +422,7 @@ function set_kcptun_config() {
         echo "(3) fast"
         echo "(4) normal"
         echo "(5) manual (手动挡)"
-        read -p "(请选择 [1~5], 默认: $D_MODE):" sel
+        read -p "(请选择 [1~5], 默认: $D_MODE): " sel
         echo
         [ -z "$sel" ] && sel=3 || expr $sel + 1 &>/dev/null
 
@@ -455,7 +457,7 @@ function set_kcptun_config() {
             echo "(3) 策略2-2: 同上, 与 策略2-1 参数略不相同"
             echo "(4) 策略3: 尽可能通过 FEC 纠删, 最大化传输速度 (较为中庸, 兼顾网页和视频)"
             echo "(5) 手动调整隐藏参数"
-            read -p "(请选择 [1~5], 默认: 策略3):" sel
+            read -p "(请选择 [1~5], 默认: 策略3): " sel
             echo
             [ -z "$sel" ] && sel=3 || expr $sel + 1 &>/dev/null
 
@@ -515,7 +517,7 @@ function set_kcptun_config() {
     do
         echo
         echo "请设置 UDP 数据包的 MTU (最大传输单元)值:"
-        read -p "(默认: $D_MTU):" mtu_value
+        read -p "(默认: $D_MTU): " mtu_value
         echo
         [ -z "$mtu_value" ] && mtu_value=$D_MTU || expr $mtu_value + 1 &>/dev/null
 
@@ -535,7 +537,7 @@ function set_kcptun_config() {
     do
         echo
         echo "请设置发送窗口大小(sndwnd):"
-        read -p "(数据包数量, 默认: $D_SNDWND):" sndwnd_value
+        read -p "(数据包数量, 默认: $D_SNDWND): " sndwnd_value
         echo
         [ -z "$sndwnd_value" ] && sndwnd_value=$D_SNDWND || expr $sndwnd_value + 1 &>/dev/null
 
@@ -555,7 +557,7 @@ function set_kcptun_config() {
     do
         echo
         echo "请设置接收窗口大小(rcvwnd):"
-        read -p "(数据包数量, 默认: $D_RCVWND):" rcvwnd_value
+        read -p "(数据包数量, 默认: $D_RCVWND): " rcvwnd_value
         echo
         [ -z "$rcvwnd_value" ] && rcvwnd_value=$D_RCVWND || expr $rcvwnd_value + 1 &>/dev/null
 
@@ -576,7 +578,7 @@ function set_kcptun_config() {
         do
             echo
             echo "请设置前向纠错 datashard:"
-            read -p "(默认: $D_DATASHARD):" datashard_value
+            read -p "(默认: $D_DATASHARD): " datashard_value
             echo
             [ -z "$datashard_value" ] && datashard_value=$D_DATASHARD || expr $datashard_value + 1 &>/dev/null
 
@@ -598,7 +600,7 @@ function set_kcptun_config() {
         do
             echo
             echo "请设置前向纠错 parityshard:"
-            read -p "(默认: $D_PARITYSHARD):" parityshard_value
+            read -p "(默认: $D_PARITYSHARD): " parityshard_value
             echo
             [ -z "$parityshard_value" ] && parityshard_value=$D_PARITYSHARD || expr $parityshard_value + 1 &>/dev/null
 
@@ -620,7 +622,7 @@ function set_kcptun_config() {
     do
         echo
         echo "请设置差分服务代码点(DSCP):"
-        read -p "(默认: $D_DSCP):" dscp_value
+        read -p "(默认: $D_DSCP): " dscp_value
         echo
         [ -z "$dscp_value" ] && dscp_value=$D_DSCP || expr $dscp_value + 1 &>/dev/null
 
@@ -639,7 +641,7 @@ function set_kcptun_config() {
     while :
     do
         echo
-        read -p "是否禁用数据压缩? (默认: 不禁用) (y/n):" yn
+        read -p "是否禁用数据压缩? (默认: 不禁用) (y/n): " yn
         echo
         [ -z "$yn" ] && yn="n"
         case ${yn:0:1} in
@@ -660,11 +662,12 @@ function set_kcptun_config() {
     any_key_to_continue
 }
 
+# 设置隐藏参数
 function set_hidden_parameters() {
     while :
     do
         echo
-        read -p "是否启用 nodelay 模式? (默认: 不启用) (y/n):" yn
+        read -p "是否启用 nodelay 模式? (默认: 不启用) (y/n): " yn
         [ -z "$yn" ] && yn="n"
         case ${yn:0:1} in
             y|Y) nodelay_value=1;;
@@ -684,7 +687,7 @@ function set_hidden_parameters() {
         echo "(1) 不启用"
         echo "(2) 启用"
         echo "(3) 2次ACK跨越重传"
-        read -p "(请选择 [1~3], 默认: 不启用):" sel
+        read -p "(请选择 [1~3], 默认: 不启用): " sel
         [ -z "$sel" ] && sel=1 || expr $sel + 1 &>/dev/null
 
         if [ $? -eq 0 ]; then
@@ -707,7 +710,7 @@ function set_hidden_parameters() {
     while :
     do
         echo
-        read -p "是否关闭流控? (nc) (默认: 不关闭) (y/n):" yn
+        read -p "是否关闭流控? (nc) (默认: 不关闭) (y/n): " yn
         [ -z "$yn" ] && yn="n"
         case ${yn:0:1} in
             y|Y) nc_value=1;;
@@ -724,7 +727,7 @@ function set_hidden_parameters() {
     do
         echo
         echo "请设置协议内部工作的 interval (单位: ms)"
-        read -p "(默认: 20):" interval_value
+        read -p "(默认: 20): " interval_value
         echo
         [ -z "$interval_value" ] && interval_value=20 || expr $interval_value + 1 &>/dev/null
 
@@ -938,13 +941,14 @@ function download_file(){
         exit_with_error $E_XCD
     }
 
-    $(curl -L -C - -o "kcptun-$kcptun_release_tag_name.tar.gz" "$kcptun_release_download_url") || {
+    $(curl -k -L -C - -o "kcptun-$kcptun_release_tag_name.tar.gz" "$kcptun_release_download_url") || {
         echo
         echo "下载 Kcptun 文件失败！"
         exit_with_error $E_DOWNLOAD_FAILED
     }
 }
 
+# 解压文件
 function unpack_file() {
     echo
     echo "开始解压文件..."
@@ -1004,6 +1008,7 @@ EOF
     fi
 }
 
+# 下载服务脚本
 function downlod_init_script() {
     echo
     echo "开始下载服务脚本..."
@@ -1015,11 +1020,11 @@ function downlod_init_script() {
         init_file_url="https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/ubuntu.init"
     }
 
-    if ! $(wget --no-check-certificate -O /etc/init.d/supervisord "$init_file_url"); then
+    $(wget --no-check-certificate -O /etc/init.d/supervisord "$init_file_url") || {
         echo
         echo "下载 Supervisor 自启脚本失败！"
         exit_with_error $E_DOWNLOAD_FAILED
-    fi
+    }
 
     chmod a+x /etc/init.d/supervisord
 
@@ -1116,7 +1121,7 @@ function show_config_info() {
     echo "Kcptun 服务端 {启动|关闭|重启|查看状态} 命令: supervisorctl {start|stop|restart|status} kcptun"
     echo "已将 Supervisor 加入开机自启, Kcptun 服务端会随 Supervisor 的启动而启动"
     echo
-    echo -e "如需 {重新配置|更新|卸载} 服务端, 请使用: $0 {reconfig|update|uninstall}"
+    echo -e "如需 {重新配置|更新|卸载|手动选择版本|查看配置}, 请使用: $0 {reconfig|update|uninstall|manual|show}"
     echo
     echo "欢迎访问扩软博客: https://blog.kuoruan.com/"
     echo
@@ -1184,7 +1189,7 @@ function manual_install() {
         while :
         do
             echo
-            read -p "请输入你想安装的 Kcptun 版本 TAG, 例如: v20160902:" tag_name
+            read -p "请输入你想安装的 Kcptun 版本 TAG, 例如: v20160902: " tag_name
             if $(echo "$tag_name" | grep -qE "\w+"); then
                 local version_num
                 version_num=$(echo "$tag_name" | grep -oE "[0-9]+") || version_num=0
@@ -1198,7 +1203,7 @@ function manual_install() {
                 if [ $? -eq $E_WRONG_TAG ]; then
                     echo
                     echo "未找到对应版本下载地址, 你输入的 TAG 为: $tag_name , 请重新输入!"
-                    echo "你可以前往: $KCPTUN_TAGS_URL 查看所有可用 Tag"
+                    echo "你可以前往: $KCPTUN_TAGS_URL 查看所有可用 TAG"
                     continue
                 else
                     echo
@@ -1341,7 +1346,7 @@ function check_update() {
 }
 
 # 卸载 Kcptun
-function uninstall_kcptun(){
+function uninstall_kcptun() {
     permission_check
     linux_check
     echo
