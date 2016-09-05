@@ -666,7 +666,7 @@ function set_kcptun_config() {
                 continue;;
         esac
         echo "---------------------------"
-        echo "nocomp = $nocomp"
+        [ "$nocomp" = "true" ] && echo "禁用数据压缩" || echo "启用数据压缩"
         echo "---------------------------"
         break
     done
@@ -1192,7 +1192,7 @@ function show_config_info() {
     [ "$datashard_value" != "$D_DATASHARD" ] && echo -e "前向纠错 Datashard: \033[41;37m ${datashard_value} \033[0m"
     [ "$parityshard_value" != "$D_PARITYSHARD" ] && echo -e "前向纠错 Parityshard: \033[41;37m ${parityshard_value} \033[0m"
     [ "$dscp_value" != "$D_DSCP" ] && echo -e "差分服务代码点 DSCP: \033[41;37m ${dscp_value} \033[0m"
-    echo -e "数据压缩 nocomp: \033[41;37m ${$nocomp} \033[0m"
+    [ "$nocomp" = "true" ] && echo -e "数据压缩: \033[41;37m 已禁用 \033[0m"
     echo
     [ -n "$installed_kcptun_version" ] && echo "当前安装的 Kcptun 版本为: v${installed_kcptun_version}"
     [ -n "$kcptun_release_html_url" ] && echo "请前往 ${kcptun_release_html_url} 手动下载客户端文件"
