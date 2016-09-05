@@ -53,7 +53,7 @@ SUCCESS=0 # 脚本正常退出
 
 # 错误代码
 ERROR=1 # 常规错误
-E_INSTALLED_SUPERVISOR=65
+E_INSTALLED_SUPERVISOR=65 # 已安装Supervisor
 E_INSTALL_DEPENDENCE=66 # 安装依耐环境失败
 E_NOT_SUPPORT_OS=75 # 不支持的系统
 E_NOT_SUPPORT_VERION=76 # 不支持的系统版本
@@ -142,8 +142,8 @@ function get_arch() {
 function get_server_ip() {
     SERVER_IP=$(ip addr | grep -Eo "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" | \
         grep -Ev "^192\.168|^172\.1[6-9]\.|^172\.2[0-9]\.|^172\.3[0-2]\.|^10\.|^127\.|^255\.|^0\." | \
-        head -n 1) || \
-    SERVER_IP=$(wget -q -O - ipv4.icanhazip.com)
+        head -n 1)
+    [ -z "$SERVER_IP" ] && SERVER_IP=$(wget -q -O - ipv4.icanhazip.com)
 }
 
 # 禁用 selinux
@@ -207,7 +207,7 @@ function installed_check() {
             echo "(6) 手动输入版本安装"
             echo "(7) 卸载"
             echo "(8) 退出"
-            read -p "(请选择 [1~8], 默认: 1): " sel
+            read -p "(默认: 覆盖安装) 请选择 [1~8]: " sel
             echo
             [ -z "$sel" ] && sel=1 || expr $sel + 0 &>/dev/null
 
@@ -255,8 +255,8 @@ function set_kcptun_config() {
     while :
     do
         echo
-        echo -e "请输入 Kcptun 服务端运行端口 [1-65535]: "
-        read -p "(默认: $D_PORT):" kcptun_port
+        echo "请输入 Kcptun 服务端运行端口 [1~65535]"
+        read -p "(默认: $D_PORT): " kcptun_port
         echo
         [ -z "$kcptun_port" ] && kcptun_port=$D_PORT || expr $kcptun_port + 1 &>/dev/null
 
@@ -283,7 +283,8 @@ function set_kcptun_config() {
     while :
     do
         echo
-        read -p "是否禁用 IPv6? (默认: 不禁用) (y/n): " yn
+        echo "是否禁用 IPv6?"
+        read -p "(默认: 不禁用) [y/n]: " yn
         echo
         [ -n "$yn" ] && {
             case ${yn:0:1} in
@@ -304,8 +305,8 @@ function set_kcptun_config() {
     while :
     do
         echo
-        echo -e "请输入需要加速的 IP [0.0.0.0 ~ 255.255.255.255]: "
-        read -p "(默认: $D_TARGET_IP):" target_ip
+        echo "请输入需要加速的 IP [0.0.0.0 ~ 255.255.255.255]"
+        read -p "(默认: $D_TARGET_IP): " target_ip
         echo
         [ -z "$target_ip" ] && target_ip=$D_TARGET_IP || echo "$target_ip" | \
         grep -qE '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
@@ -324,8 +325,8 @@ function set_kcptun_config() {
     while :
     do
         echo
-        echo -e "请输入需要加速的端口 [1-65535]: "
-        read -p "(默认: $D_TARGET_PORT):" target_port
+        echo "请输入需要加速的端口 [1~65535]"
+        read -p "(默认: $D_TARGET_PORT): " target_port
         echo
         [ -z "$target_port" ] && target_port=$D_TARGET_PORT || expr $target_port + 1 &>/dev/null
 
@@ -334,7 +335,7 @@ function set_kcptun_config() {
 
                 if [ "$target_ip" = "$D_TARGET_IP" ]; then
                     $(netstat -an | grep -qE "[0-9:]:${target_port} .+LISTEN") || {
-                        read -p "当前没有软件使用此端口, 确定加速此端口?(y/n): " yn
+                        read -p "当前没有软件使用此端口, 确定加速此端口? [y/n]: " yn
                         case ${yn:0:1} in
                             y|Y) :;;
                             *  ) continue;;
@@ -356,7 +357,7 @@ function set_kcptun_config() {
 
     # 设置 Kcptun 密码
     echo
-    echo "请输入 Kcptun 密码:"
+    echo "请输入 Kcptun 密码"
     read -p "(如果不想使用密码请留空): " kcptun_pwd
     echo
     echo "---------------------------"
@@ -380,7 +381,7 @@ function set_kcptun_config() {
         echo "(10) xtea"
         echo "(11) xor"
         echo "(12) none"
-        read -p "(请选择 [1~12], 默认: $D_CRYPT): " sel
+        read -p "(默认: $D_CRYPT) 请选择 [1~12]: " sel
         echo
         [ -z "$sel" ] && sel=1 || expr $sel + 1 &>/dev/null
 
@@ -422,7 +423,7 @@ function set_kcptun_config() {
         echo "(3) fast"
         echo "(4) normal"
         echo "(5) manual (手动挡)"
-        read -p "(请选择 [1~5], 默认: $D_MODE): " sel
+        read -p "(默认: $D_MODE) 请选择 [1~5]: " sel
         echo
         [ -z "$sel" ] && sel=3 || expr $sel + 1 &>/dev/null
 
@@ -457,7 +458,7 @@ function set_kcptun_config() {
             echo "(3) 策略2-2: 同上, 与 策略2-1 参数略不相同"
             echo "(4) 策略3: 尽可能通过 FEC 纠删, 最大化传输速度 (较为中庸, 兼顾网页和视频)"
             echo "(5) 手动调整隐藏参数"
-            read -p "(请选择 [1~5], 默认: 策略3): " sel
+            read -p "(默认: 策略3) 请选择 [1~5]: " sel
             echo
             [ -z "$sel" ] && sel=3 || expr $sel + 1 &>/dev/null
 
@@ -516,7 +517,7 @@ function set_kcptun_config() {
     while :
     do
         echo
-        echo "请设置 UDP 数据包的 MTU (最大传输单元)值:"
+        echo "请设置 UDP 数据包的 MTU (最大传输单元)值"
         read -p "(默认: $D_MTU): " mtu_value
         echo
         [ -z "$mtu_value" ] && mtu_value=$D_MTU || expr $mtu_value + 1 &>/dev/null
@@ -536,7 +537,7 @@ function set_kcptun_config() {
     while :
     do
         echo
-        echo "请设置发送窗口大小(sndwnd):"
+        echo "请设置发送窗口大小(sndwnd)"
         read -p "(数据包数量, 默认: $D_SNDWND): " sndwnd_value
         echo
         [ -z "$sndwnd_value" ] && sndwnd_value=$D_SNDWND || expr $sndwnd_value + 1 &>/dev/null
@@ -556,7 +557,7 @@ function set_kcptun_config() {
     while :
     do
         echo
-        echo "请设置接收窗口大小(rcvwnd):"
+        echo "请设置接收窗口大小(rcvwnd)"
         read -p "(数据包数量, 默认: $D_RCVWND): " rcvwnd_value
         echo
         [ -z "$rcvwnd_value" ] && rcvwnd_value=$D_RCVWND || expr $rcvwnd_value + 1 &>/dev/null
@@ -577,7 +578,7 @@ function set_kcptun_config() {
         while :
         do
             echo
-            echo "请设置前向纠错 datashard:"
+            echo "请设置前向纠错 datashard"
             read -p "(默认: $D_DATASHARD): " datashard_value
             echo
             [ -z "$datashard_value" ] && datashard_value=$D_DATASHARD || expr $datashard_value + 1 &>/dev/null
@@ -599,7 +600,7 @@ function set_kcptun_config() {
         while :
         do
             echo
-            echo "请设置前向纠错 parityshard:"
+            echo "请设置前向纠错 parityshard"
             read -p "(默认: $D_PARITYSHARD): " parityshard_value
             echo
             [ -z "$parityshard_value" ] && parityshard_value=$D_PARITYSHARD || expr $parityshard_value + 1 &>/dev/null
@@ -621,7 +622,7 @@ function set_kcptun_config() {
     while :
     do
         echo
-        echo "请设置差分服务代码点(DSCP):"
+        echo "请设置差分服务代码点(DSCP)"
         read -p "(默认: $D_DSCP): " dscp_value
         echo
         [ -z "$dscp_value" ] && dscp_value=$D_DSCP || expr $dscp_value + 1 &>/dev/null
@@ -641,7 +642,8 @@ function set_kcptun_config() {
     while :
     do
         echo
-        read -p "是否禁用数据压缩? (默认: 不禁用) (y/n): " yn
+        echo "是否禁用数据压缩?"
+        read -p "(默认: 不禁用) [y/n]: " yn
         echo
         [ -z "$yn" ] && yn="n"
         case ${yn:0:1} in
@@ -667,7 +669,8 @@ function set_hidden_parameters() {
     while :
     do
         echo
-        read -p "是否启用 nodelay 模式? (默认: 不启用) (y/n): " yn
+        echo "是否启用 nodelay 模式?"
+        read -p "(默认: 不启用) [y/n]: " yn
         [ -z "$yn" ] && yn="n"
         case ${yn:0:1} in
             y|Y) nodelay_value=1;;
@@ -683,11 +686,11 @@ function set_hidden_parameters() {
     while :
     do
         echo
-        echo "是否启用快速重传模式? (resend)"
+        echo "是否启用快速重传模式(resend)?"
         echo "(1) 不启用"
         echo "(2) 启用"
         echo "(3) 2次ACK跨越重传"
-        read -p "(请选择 [1~3], 默认: 不启用): " sel
+        read -p "(默认: 不启用) 请选择 [1~3]: " sel
         [ -z "$sel" ] && sel=1 || expr $sel + 1 &>/dev/null
 
         if [ $? -eq 0 ]; then
@@ -710,7 +713,8 @@ function set_hidden_parameters() {
     while :
     do
         echo
-        read -p "是否关闭流控? (nc) (默认: 不关闭) (y/n): " yn
+        echo "是否关闭流控(nc)?"
+        read -p "(默认: 不关闭) [y/n]: " yn
         [ -z "$yn" ] && yn="n"
         case ${yn:0:1} in
             y|Y) nc_value=1;;
