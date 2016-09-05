@@ -296,7 +296,7 @@ function set_kcptun_config() {
         echo
         [ -n "$yn" ] && {
             case ${yn:0:1} in
-                y|Y) kcptun_addr="127.0.0.1";;
+                y|Y) kcptun_addr=$SERVER_IP;;
                 n|N) unset kcptun_addr;;
                 *  )
                     echo "输入有误, 请重新输入！"
