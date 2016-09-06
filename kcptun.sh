@@ -62,7 +62,7 @@ SUCCESS=0 # 脚本正常退出
 # 错误代码
 ERROR=1 # 常规错误
 E_INSTALLED_SUPERVISOR=65 # 已安装Supervisor
-E_INSTALL_DEPENDENCE=66 # 安装依耐环境失败
+E_INSTALL_DEPENDENCE=66 # 安装依赖软件失败
 E_NOT_SUPPORT_OS=75 # 不支持的系统
 E_NOT_SUPPORT_VERION=76 # 不支持的系统版本
 E_CREATE_DIR=85 # 创建文件夹失败
@@ -73,6 +73,8 @@ E_FILE_NOT_FOUND=89 # 文件未找到
 E_NETWORK=100 # 网络错误
 E_WRONG_TAG=101 # TAG未找到
 E_DOWNLOAD_FAILED=102 # 下载失败
+E_ILLEGAL_COMMAND=127 # 命令不存在
+E_INVALID_ARGUMENT=128 # 参数错误
 
 clear
 
@@ -255,6 +257,29 @@ function installed_check() {
     }
 }
 
+# 检测端口是否被占用
+function check_port() {
+    [ $# -lt 1 ] && return $E_INVALID_ARGUMENT
+    local port=$1
+    local protocol=${2:-"tcp"}
+
+    if $(command -v netstat &>/dev/null); then
+        if [ "$protocol" = "tcp" ]; then
+            return $(netstat -ntl | grep -qE "[0-9:]:${port} .+LISTEN")
+        else
+            return $(netstat -nul | grep -qE "udp.+[0-9:]:${port} ")
+        fi
+    elif $(command -v ss &>/dev/null); then
+        if [ "$protocol" = "tcp" ]; then
+            return $(ss -tl | grep -qE "LISTEN .+[0-9:]:${port} ")
+        else
+            return $(ss -nul | grep -qE "CONN .+[0-9:]:${port} ")
+        fi
+    else
+        return $E_ILLEGAL_COMMAND
+    fi
+}
+
 # 设置参数
 function set_kcptun_config() {
     echo
@@ -271,7 +296,7 @@ function set_kcptun_config() {
         if [ $? -eq 0 ]; then
             if [ $kcptun_port -ge 1 -a $kcptun_port -le 65535 ]; then
 
-                $(netstat -an | grep -qE "[0-9:]:${kcptun_port} .+LISTEN") && {
+                $(check_port $kcptun_port "udp") && {
                     echo "端口已被占用, 请重新输入!"
                 } || {
                     echo "---------------------------"
@@ -342,7 +367,7 @@ function set_kcptun_config() {
             if [ $target_port -ge 1 -a $target_port -le 65535 ]; then
 
                 if [ "$target_ip" = "$D_TARGET_IP" ]; then
-                    $(netstat -an | grep -qE "[0-9:]:${target_port} .+LISTEN") || {
+                    $(check_port $target_port "tcp") || {
                         read -p "当前没有软件使用此端口, 确定加速此端口? [y/n]: " yn
                         [ -z "$yn" ] && yn="y"
                         case ${yn:0:1} in
