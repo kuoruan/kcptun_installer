@@ -640,7 +640,6 @@ function set_kcptun_config() {
 
             if [ $? -eq 0 ]; then
                 [ $parityshard_value -ge 0 ] && {
-                    echo
                     echo "---------------------------"
                     echo "parityshard = $parityshard_value"
                     echo "---------------------------"
@@ -1175,6 +1174,46 @@ function install_service() {
     }
 }
 
+# 设置防火墙
+function config_firewall() {
+    echo
+    echo "开始设置防火墙..."
+    if $(command -v iptables &>/dev/null); then
+        $(service iptables status &>/dev/null) && {
+            iptables -L -n | grep "$kcptun_port" | grep "ACCEPT" &>/dev/null
+            if [ $? -ne 0 ]; then
+                iptables -I INPUT -m state --state NEW -m tcp -p tcp --dport ${kcptun_port} -j ACCEPT
+                iptables -I INPUT -m state --state NEW -m udp -p udp --dport ${kcptun_port} -j ACCEPT
+                service iptables save
+                service iptables restart
+            else
+                echo
+                echo "端口 ${kcptun_port} 已设置!"
+            fi
+        } || {
+            echo
+            echo "iptables 未启动或未配置"
+            echo "如有必要, 请手动添加端口 ${kcptun_port} 的防火墙规则!"
+        }
+    else
+        echo
+        echo "未发现已安装的 iptables"
+    fi
+
+    if $(command -v firewall-cmd &>/dev/null); then
+        $(systemctl status firewalld &>/dev/null) && {
+            firewall-cmd --permanent --zone=public --add-port=${kcptun_port}/tcp
+            firewall-cmd --permanent --zone=public --add-port=${kcptun_port}/udp
+            firewall-cmd --reload
+        } || {
+            echo "Firewalld 未启动或未配置, 如果有必要, 请手动添加端口 ${kcptun_port} 的防火墙规则!"
+        }
+    else
+        echo
+        echo "未发现已安装的 Firewalld"
+    fi
+}
+
 # 安装清理
 function install_cleanup() {
     echo
@@ -1186,6 +1225,8 @@ function install_cleanup() {
 
 # 获取当前安装的 kcptun 版本
 function get_installed_version() {
+    echo
+    echo "正在获取当前安装的 Kcptun 版本..."
     local kcptun_server_exec="$KCPTUN_INSTALL_DIR"/server_"$FILE_SUFFIX"
     if [ -x "$kcptun_server_exec" ]; then
         installed_kcptun_version=$(${kcptun_server_exec} --version | grep -oE "[0-9]+")
@@ -1268,6 +1309,7 @@ function install_kcptun(){
     config_kcptun
     downlod_init_script
     install_service
+    config_firewall
     update_tag_name
     install_cleanup
     get_installed_version
@@ -1498,6 +1540,7 @@ function reconfig_kcptun() {
     echo
     echo "正在写入新的配置..."
     config_kcptun
+    config_firewall
 
     touch "$KCPTUN_LOG_FILE" && echo > "$KCPTUN_LOG_FILE"
 
