@@ -937,7 +937,6 @@ function install_dependence() {
         yum --disablerepo=epel update -y ca-certificates || yum update -y ca-certificates
         yum install -y epel-release
         yum --enablerepo=epel install -y curl wget jq python-setuptools tar
-        [ "$OS_VSRSION" -eq 7 ] && yum -y install net-tools
     else
         apt-get -y update
         apt-get -y install curl wget jq python-setuptools tar || {
