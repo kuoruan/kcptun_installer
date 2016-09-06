@@ -261,20 +261,11 @@ function installed_check() {
 function check_port() {
     [ $# -lt 1 ] && return $E_INVALID_ARGUMENT
     local port=$1
-    local protocol=${2:-"tcp"}
 
     if $(command -v netstat &>/dev/null); then
-        if [ "$protocol" = "tcp" ]; then
-            return $(netstat -ntl | grep -qE "[0-9:]:${port} .+LISTEN")
-        else
-            return $(netstat -nul | grep -qE "udp.+[0-9:]:${port} ")
-        fi
+        return $(netstat -ntul | grep -qE "[0-9:]:${port} ")
     elif $(command -v ss &>/dev/null); then
-        if [ "$protocol" = "tcp" ]; then
-            return $(ss -tl | grep -qE "LISTEN .+[0-9:]:${port} ")
-        else
-            return $(ss -nul | grep -qE "CONN .+[0-9:]:${port} ")
-        fi
+        return $(ss -ntul | grep -qE "[0-9:]:${port} ")
     else
         return $E_ILLEGAL_COMMAND
     fi
@@ -296,7 +287,7 @@ function set_kcptun_config() {
         if [ $? -eq 0 ]; then
             if [ $kcptun_port -ge 1 -a $kcptun_port -le 65535 ]; then
 
-                $(check_port $kcptun_port "udp") && {
+                $(check_port $kcptun_port) && {
                     echo "端口已被占用, 请重新输入!"
                 } || {
                     echo "---------------------------"
@@ -366,8 +357,13 @@ function set_kcptun_config() {
         if [ $? -eq 0 ]; then
             if [ $target_port -ge 1 -a $target_port -le 65535 ]; then
 
+                [ $target_port -eq $kcptun_port ] && {
+                    echo "加速端口不能和 Kcptun 端口一致!"
+                    continue
+                }
+
                 if [ "$target_ip" = "$D_TARGET_IP" ]; then
-                    $(check_port $target_port "tcp") || {
+                    $(check_port $target_port) || {
                         read -p "当前没有软件使用此端口, 确定加速此端口? [y/n]: " yn
                         [ -z "$yn" ] && yn="y"
                         case ${yn:0:1} in
