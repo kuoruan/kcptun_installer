@@ -1244,7 +1244,7 @@ function show_config_info() {
     echo -e "服务器IP: \033[41;37m ${SERVER_IP} \033[0m"
     echo -e "端口: \033[41;37m ${kcptun_port} \033[0m"
     echo -e "加速地址: ${target_ip}:${target_port}"
-    [ -n "$kcptunpwd" ] && echo -e "密码: \033[41;37m ${kcptun_pwd} \033[0m"
+    [ -n "$kcptun_pwd" ] && echo -e "密码: \033[41;37m ${kcptun_pwd} \033[0m"
     [ "$crypt_methods" != "$D_CRYPT" ] && echo -e "加密方式 Crypt: \033[41;37m ${crypt_methods} \033[0m"
     [ "$comm_mode" != "$D_MODE" ] && echo -e "加速模式 Mode: \033[41;37m ${comm_mode} \033[0m"
     [ "$mtu_value" != "$D_MTU" ] && echo -e "MTU: \033[41;37m ${mtu_value} \033[0m"
@@ -1462,8 +1462,8 @@ function check_update() {
     if [ -n "$kcptun_release_tag_name" -a "$kcptun_release_tag_name" != "$cur_tag_name" ]; then
         echo "发现 Kcptun 新版本 ${kcptun_release_tag_name}"
         echo -e "更新说明: \n${kcptun_release_name}"
+        [ "$kcptun_release_prerelease" = "true" ] && echo -e "\033[41;37m 注意: 该版本为预览版, 请谨慎更新 \033[0m"
         echo
-        [ "$kcptun_release_prerelease" = "true" ] && echo -e "\033[41;37m 注意: 该版本为预览版, 可能会出现各种问题 \033[0m"
         echo "按任意键开始更新, 或者 Ctrl+C 取消"
         any_key_to_continue
         echo "正在自动更新 Kcptun..."
