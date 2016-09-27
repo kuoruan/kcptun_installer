@@ -27,20 +27,20 @@ INIT_VERSION=2
 KCPTUN_TAG_NAME=
 
 CUR_DIR=`pwd` # 当前目录
-KCPTUN_INSTALL_DIR="/usr/share/kcptun" # kcptun 默认安装目录
-KCPTUN_LOG_FILE="/var/log/kcptun.log"
-KCPTUN_RELEASES_URL="https://api.github.com/repos/xtaci/kcptun/releases"
-KCPTUN_TAGS_URL="https://github.com/xtaci/kcptun/tags"
-SHELL_VERSION_INFO_URL="https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.json"
+KCPTUN_INSTALL_DIR=/usr/share/kcptun # kcptun 默认安装目录
+KCPTUN_LOG_FILE=/var/log/kcptun.log
+KCPTUN_RELEASES_URL=https://api.github.com/repos/xtaci/kcptun/releases
+KCPTUN_TAGS_URL=https://github.com/xtaci/kcptun/tags
+SHELL_VERSION_INFO_URL=https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.json
 
 ## 参数默认值
 
 # 常规参数
 D_PORT=29900
-D_TARGET_IP="127.0.0.1"
-D_TARGET_PORT="12948"
-D_CRYPT="aes"
-D_MODE="fast"
+D_TARGET_IP=127.0.0.1
+D_TARGET_PORT=12948
+D_CRYPT=aes
+D_MODE=fast
 D_MTU=1350
 D_SNDWND=1024
 D_RCVWND=1024
@@ -198,6 +198,7 @@ function installed_check() {
         echo -n "你可以通过 "
         [ "$OS" = "CentOS" ] && echo -n "yum remove supervisor" || echo -n "apt-get remove supervisor"
         echo " 来卸载原有版本"
+        echo "若卸载失败, 你可以手动删除 /etc/supervisord.conf, 然后重新运行脚本"
 
         exit_with_error $E_INSTALLED_SUPERVISOR
     }
@@ -271,11 +272,8 @@ function check_port() {
     fi
 }
 
-# 设置参数
-function set_kcptun_config() {
-    echo
-    echo "开始配置参数..."
-    # 设置 Kcptun 端口
+# 设置 Kcptun 端口
+function set_kcptun_port() {
     while :
     do
         echo
@@ -303,7 +301,10 @@ function set_kcptun_config() {
             echo "输入有误, 请输入数字!"
         fi
     done
+}
 
+# 禁用 IPv6
+function set_disable_ipv6() {
     while :
     do
         echo
@@ -324,8 +325,10 @@ function set_kcptun_config() {
         echo "---------------------------"
         break
     done
+}
 
-    # 设置加速的ip地址
+# 设置加速的ip地址
+function set_target_ip() {
     while :
     do
         echo
@@ -344,8 +347,10 @@ function set_kcptun_config() {
             echo "IP 地址格式有误, 请重新输入!"
         fi
     done
+}
 
-    # 设置加速的端口
+# 设置加速的端口
+function set_target_port() {
     while :
     do
         echo
@@ -384,8 +389,10 @@ function set_kcptun_config() {
             echo "输入有误, 请输入数字!"
         fi
     done
+}
 
-    # 设置 Kcptun 密码
+# 设置 Kcptun 密码
+function set_kcptun_pwd() {
     echo
     echo "请输入 Kcptun 密码"
     read -p "(如果不想使用密码请留空): " kcptun_pwd
@@ -393,8 +400,10 @@ function set_kcptun_config() {
     echo "---------------------------"
     [ -z "$kcptun_pwd" ] && echo "未设置密码" || echo "密码 = $kcptun_pwd"
     echo "---------------------------"
+}
 
-    # 设置加密方式
+# 设置加密方式
+function set_crypt_method() {
     while :
     do
         echo
@@ -442,8 +451,10 @@ function set_kcptun_config() {
             echo "输入有误, 请输入数字！"
         fi
     done
+}
 
-    # 设置加速模式
+# 设置加速模式
+function set_comm_mode() {
     while :
     do
         echo
@@ -479,225 +490,82 @@ function set_kcptun_config() {
     done
 
     [ "$comm_mode" = "manual" ] && {
-        while :
-        do
-            echo
-            echo "请设置手动挡参数(预设值或手动设置):"
-            echo "(1) 策略1: 通过超时重传＋快速重传, 响应速度优先 (最大化响应时间, 适用于网页访问)"
-            echo "(2) 策略2-1: 仅仅通过超时重传, 带宽效率优先 (有效载比优先, 适用于视频观看)"
-            echo "(3) 策略2-2: 同上, 与 策略2-1 参数略不相同"
-            echo "(4) 策略3: 尽可能通过 FEC 纠删, 最大化传输速度 (较为中庸, 兼顾网页和视频)"
-            echo "(5) 手动调整隐藏参数"
-            read -p "(默认: 策略3) 请选择 [1~5]: " sel
-            echo
-            [ -z "$sel" ] && sel=3 || expr $sel + 1 &>/dev/null
-
-            if [ $? -eq 0 ]; then
-                case $sel in
-                    1 )
-                        nodelay_value=1
-                        interval_value=20
-                        resend_value=2
-                        nc_value=1
-                        unset datashard_value
-                        unset parityshard_value;;
-                    2 )
-                        nodelay_value=1
-                        interval_value=40
-                        resend_value=0
-                        nc_value=1
-                        unset datashard_value
-                        unset parityshard_value;;
-                    3 )
-                        nodelay_value=0
-                        interval_value=20
-                        resend_value=0
-                        nc_value=1
-                        unset datashard_value
-                        unset parityshard_value;;
-                    4 )
-                        nodelay_value=0
-                        interval_value=40
-                        resend_value=0
-                        nc_value=1
-                        datashard_value=5
-                        parityshard_value=2;;
-                    5 )
-                        echo "开始配置隐藏参数..."
-                        set_hidden_parameters;;
-                    * )
-                        echo "请输入有效数字 1~5 !"
-                        continue;;
-                esac
-                echo "---------------------------"
-                echo "nodelay = $nodelay_value"
-                echo "interval = $interval_value"
-                echo "resend = $resend_value"
-                echo "nc = $nc_value"
-                [ -n "$acknodelay" ] && echo "acknodelay = $acknodelay"
-                [ -n "$sockbuf_value" ] && echo "sockbuf = $sockbuf_value"
-                [ -n "$keepalive_value" ] && echo "keepalive = $keepalive_value"
-                [ -n "$datashard_value" ] && echo "datashard = $datashard_value"
-                [ -n "$parityshard_value" ] && echo "parityshard = $parityshard_value"
-                echo "---------------------------"
-                break
-            else
-                echo "输入有误, 请输入数字！"
-            fi
-        done
+        set_manual_parameters
     }
-
-    while :
-    do
-        echo
-        echo "请设置 UDP 数据包的 MTU (最大传输单元)值"
-        read -p "(默认: $D_MTU): " mtu_value
-        echo
-        [ -z "$mtu_value" ] && mtu_value=$D_MTU || expr $mtu_value + 1 &>/dev/null
-
-        if [ $? -eq 0 ]; then
-            [ $mtu_value -gt 0 ] && {
-                echo "---------------------------"
-                echo "MTU = $mtu_value"
-                echo "---------------------------"
-                break
-            } || echo "请输入正数！"
-        else
-            echo "输入有误, 请输入数字！"
-        fi
-    done
-
-    while :
-    do
-        echo
-        echo "请设置发送窗口大小(sndwnd)"
-        read -p "(数据包数量, 默认: $D_SNDWND): " sndwnd_value
-        echo
-        [ -z "$sndwnd_value" ] && sndwnd_value=$D_SNDWND || expr $sndwnd_value + 1 &>/dev/null
-
-        if [ $? -eq 0 ]; then
-            [ $sndwnd_value -gt 0 ] && {
-                echo "---------------------------"
-                echo "sndwnd = $sndwnd_value"
-                echo "---------------------------"
-                break
-            } || echo "请输入正数!"
-        else
-            echo "输入有误, 请输入数字！"
-        fi
-    done
-
-    while :
-    do
-        echo
-        echo "请设置接收窗口大小(rcvwnd)"
-        read -p "(数据包数量, 默认: $D_RCVWND): " rcvwnd_value
-        echo
-        [ -z "$rcvwnd_value" ] && rcvwnd_value=$D_RCVWND || expr $rcvwnd_value + 1 &>/dev/null
-
-        if [ $? -eq 0 ]; then
-            [ $rcvwnd_value -gt 0 ] && {
-                echo "---------------------------"
-                echo "rcvwnd = $rcvwnd_value"
-                echo "---------------------------"
-                break
-            } || echo "请输入正数!"
-        else
-            echo "输入有误, 请输入数字!"
-        fi
-    done
-
-    [ -z "$datashard_value" ] && {
-        while :
-        do
-            echo
-            echo "请设置前向纠错 datashard"
-            read -p "(默认: $D_DATASHARD): " datashard_value
-            echo
-            [ -z "$datashard_value" ] && datashard_value=$D_DATASHARD || expr $datashard_value + 1 &>/dev/null
-
-            if [ $? -eq 0 ]; then
-                [ $datashard_value -ge 0 ] && {
-                    echo "---------------------------"
-                    echo "datashard = $datashard_value"
-                    echo "---------------------------"
-                    break
-                } || echo "请输入大于等于0的数!"
-            else
-                echo "输入有误, 请输入数字!"
-            fi
-        done
-    }
-
-    [ -z "$parityshard_value" ] && {
-        while :
-        do
-            echo
-            echo "请设置前向纠错 parityshard"
-            read -p "(默认: $D_PARITYSHARD): " parityshard_value
-            echo
-            [ -z "$parityshard_value" ] && parityshard_value=$D_PARITYSHARD || expr $parityshard_value + 1 &>/dev/null
-
-            if [ $? -eq 0 ]; then
-                [ $parityshard_value -ge 0 ] && {
-                    echo "---------------------------"
-                    echo "parityshard = $parityshard_value"
-                    echo "---------------------------"
-                    break
-                } || echo "请输入大于等于0的数!"
-            else
-                echo "输入有误, 请输入数字!"
-            fi
-        done
-    }
-
-    while :
-    do
-        echo
-        echo "请设置差分服务代码点(DSCP)"
-        read -p "(默认: $D_DSCP): " dscp_value
-        echo
-        [ -z "$dscp_value" ] && dscp_value=$D_DSCP || expr $dscp_value + 1 &>/dev/null
-
-        if [ $? -eq 0 ]; then
-            [ $dscp_value -ge 0 ] && {
-                echo "---------------------------"
-                echo "DSCP = $dscp_value"
-                echo "---------------------------"
-                break
-            } || echo "请输入大于等于0的数!"
-        else
-            echo "输入有误, 请输入数字！"
-        fi
-    done
-
-    while :
-    do
-        echo
-        echo "是否禁用数据压缩?"
-        read -p "(默认: 不禁用) [y/n]: " yn
-        echo
-        [ -z "$yn" ] && yn="n"
-        case ${yn:0:1} in
-            y|Y) nocomp="true";;
-            n|N) nocomp="false";;
-            *  )
-                echo "输入有误, 请重新输入！"
-                continue;;
-        esac
-        echo "---------------------------"
-        [ "$nocomp" = "true" ] && echo "禁用数据压缩" || echo "启用数据压缩"
-        echo "---------------------------"
-        break
-    done
-
-    echo
-    echo "配置设置完成, 按任意键继续...或者 Ctrl+C 取消"
-    any_key_to_continue
 }
 
-# 设置隐藏参数
-function set_hidden_parameters() {
+# 设置手动挡参数
+function set_manual_parameters() {
+    while :
+    do
+        echo
+        echo "请设置手动挡参数(预设值或手动设置):"
+        echo "(1) 策略1: 通过超时重传＋快速重传, 响应速度优先 (最大化响应时间, 适用于网页访问)"
+        echo "(2) 策略2-1: 仅仅通过超时重传, 带宽效率优先 (有效载比优先, 适用于视频观看)"
+        echo "(3) 策略2-2: 同上, 与 策略2-1 参数略不相同"
+        echo "(4) 策略3: 尽可能通过 FEC 纠删, 最大化传输速度 (较为中庸, 兼顾网页和视频)"
+        echo "(5) 手动调整隐藏参数"
+        read -p "(默认: 策略3) 请选择 [1~5]: " sel
+        echo
+        [ -z "$sel" ] && sel=3 || expr $sel + 1 &>/dev/null
+
+        if [ $? -eq 0 ]; then
+            case $sel in
+                1 )
+                    nodelay_value=1
+                    interval_value=20
+                    resend_value=2
+                    nc_value=1
+                    unset datashard_value
+                    unset parityshard_value;;
+                2 )
+                    nodelay_value=1
+                    interval_value=40
+                    resend_value=0
+                    nc_value=1
+                    unset datashard_value
+                    unset parityshard_value;;
+                3 )
+                    nodelay_value=0
+                    interval_value=20
+                    resend_value=0
+                    nc_value=1
+                    unset datashard_value
+                    unset parityshard_value;;
+                4 )
+                    nodelay_value=0
+                    interval_value=40
+                    resend_value=0
+                    nc_value=1
+                    datashard_value=5
+                    parityshard_value=2;;
+                5 )
+                    echo "开始配置隐藏参数..."
+                    set_manual_detail_parameters;;
+                * )
+                    echo "请输入有效数字 1~5 !"
+                    continue;;
+            esac
+            echo "---------------------------"
+            echo "nodelay = $nodelay_value"
+            echo "interval = $interval_value"
+            echo "resend = $resend_value"
+            echo "nc = $nc_value"
+            [ -n "$acknodelay" ] && echo "acknodelay = $acknodelay"
+            [ -n "$sockbuf_value" ] && echo "sockbuf = $sockbuf_value"
+            [ -n "$keepalive_value" ] && echo "keepalive = $keepalive_value"
+            [ -n "$datashard_value" ] && echo "datashard = $datashard_value"
+            [ -n "$parityshard_value" ] && echo "parityshard = $parityshard_value"
+            echo "---------------------------"
+            break
+        else
+            echo "输入有误, 请输入数字！"
+        fi
+    done
+}
+
+# 设置手动模式详细参数
+function set_manual_detail_parameters() {
     while :
     do
         echo
@@ -776,6 +644,206 @@ function set_hidden_parameters() {
         esac
         break
     done
+}
+
+function set_mtu_value() {
+    while :
+    do
+        echo
+        echo "请设置 UDP 数据包的 MTU (最大传输单元)值"
+        read -p "(默认: $D_MTU): " mtu_value
+        echo
+        [ -z "$mtu_value" ] && mtu_value=$D_MTU || expr $mtu_value + 1 &>/dev/null
+
+        if [ $? -eq 0 ]; then
+            [ $mtu_value -gt 0 ] && {
+                echo "---------------------------"
+                echo "MTU = $mtu_value"
+                echo "---------------------------"
+                break
+            } || echo "请输入正数！"
+        else
+            echo "输入有误, 请输入数字！"
+        fi
+    done
+}
+
+function set_sndwnd_value() {
+    while :
+    do
+        echo
+        echo "请设置发送窗口大小(sndwnd)"
+        read -p "(数据包数量, 默认: $D_SNDWND): " sndwnd_value
+        echo
+        [ -z "$sndwnd_value" ] && sndwnd_value=$D_SNDWND || expr $sndwnd_value + 1 &>/dev/null
+
+        if [ $? -eq 0 ]; then
+            [ $sndwnd_value -gt 0 ] && {
+                echo "---------------------------"
+                echo "sndwnd = $sndwnd_value"
+                echo "---------------------------"
+                break
+            } || echo "请输入正数!"
+        else
+            echo "输入有误, 请输入数字！"
+        fi
+    done
+}
+
+function set_rcvwnd_value() {
+    while :
+    do
+        echo
+        echo "请设置接收窗口大小(rcvwnd)"
+        read -p "(数据包数量, 默认: $D_RCVWND): " rcvwnd_value
+        echo
+        [ -z "$rcvwnd_value" ] && rcvwnd_value=$D_RCVWND || expr $rcvwnd_value + 1 &>/dev/null
+
+        if [ $? -eq 0 ]; then
+            [ $rcvwnd_value -gt 0 ] && {
+                echo "---------------------------"
+                echo "rcvwnd = $rcvwnd_value"
+                echo "---------------------------"
+                break
+            } || echo "请输入正数!"
+        else
+            echo "输入有误, 请输入数字!"
+        fi
+    done
+}
+
+function set_datashard_value() {
+    while :
+    do
+        echo
+        echo "请设置前向纠错 datashard"
+        read -p "(默认: $D_DATASHARD): " datashard_value
+        echo
+        [ -z "$datashard_value" ] && datashard_value=$D_DATASHARD || expr $datashard_value + 1 &>/dev/null
+
+        if [ $? -eq 0 ]; then
+            [ $datashard_value -ge 0 ] && {
+                echo "---------------------------"
+                echo "datashard = $datashard_value"
+                echo "---------------------------"
+                break
+            } || echo "请输入大于等于0的数!"
+        else
+            echo "输入有误, 请输入数字!"
+        fi
+    done
+}
+
+function set_parityshard_value() {
+    while :
+    do
+        echo
+        echo "请设置前向纠错 parityshard"
+        read -p "(默认: $D_PARITYSHARD): " parityshard_value
+        echo
+        [ -z "$parityshard_value" ] && parityshard_value=$D_PARITYSHARD || expr $parityshard_value + 1 &>/dev/null
+
+        if [ $? -eq 0 ]; then
+            [ $parityshard_value -ge 0 ] && {
+                echo "---------------------------"
+                echo "parityshard = $parityshard_value"
+                echo "---------------------------"
+                break
+            } || echo "请输入大于等于0的数!"
+        else
+            echo "输入有误, 请输入数字!"
+        fi
+    done
+}
+
+function set_dscp_value() {
+    while :
+    do
+        echo
+        echo "请设置差分服务代码点(DSCP)"
+        read -p "(默认: $D_DSCP): " dscp_value
+        echo
+        [ -z "$dscp_value" ] && dscp_value=$D_DSCP || expr $dscp_value + 1 &>/dev/null
+
+        if [ $? -eq 0 ]; then
+            [ $dscp_value -ge 0 ] && {
+                echo "---------------------------"
+                echo "DSCP = $dscp_value"
+                echo "---------------------------"
+                break
+            } || echo "请输入大于等于0的数!"
+        else
+            echo "输入有误, 请输入数字！"
+        fi
+    done
+}
+
+function set_nocomp() {
+    while :
+    do
+        echo
+        echo "是否禁用数据压缩?"
+        read -p "(默认: 不禁用) [y/n]: " yn
+        echo
+        [ -z "$yn" ] && yn="n"
+        case ${yn:0:1} in
+            y|Y) nocomp="true";;
+            n|N) nocomp="false";;
+            *  )
+                echo "输入有误, 请重新输入！"
+                continue;;
+        esac
+        echo "---------------------------"
+        [ "$nocomp" = "true" ] && echo "禁用数据压缩" || echo "启用数据压缩"
+        echo "---------------------------"
+        break
+    done
+}
+
+# 设置参数
+function set_kcptun_config() {
+    echo
+    echo "开始配置参数..."
+
+    set_kcptun_port
+    set_disable_ipv6
+    set_target_ip
+    set_target_port
+    set_kcptun_pwd
+    set_crypt_method
+    set_comm_mode
+    set_mtu_value
+    set_sndwnd_value
+    set_rcvwnd_value
+    set_datashard_value
+    set_parityshard_value
+    set_dscp_value
+    set_nocomp
+
+    while :
+    do
+        echo
+        echo "是否调整隐藏参数?"
+        read -p "(默认: 否) [y/n]: " yn
+        echo
+        [ -z "$yn" ] && yn="n"
+        case ${yn:0:1} in
+            y|Y) set_hidden_parameters;;
+            n|N) ;;
+            *  )
+                echo "输入有误, 请重新输入！"
+                continue;;
+        esac
+        break
+    done
+
+    echo
+    echo "配置设置完成, 按任意键继续...或者 Ctrl+C 取消"
+    any_key_to_continue
+}
+
+# 设置隐藏参数
+function set_hidden_parameters() {
 
     while :
     do
