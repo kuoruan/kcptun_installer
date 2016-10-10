@@ -1709,9 +1709,8 @@ install_kcptun() {
 update_kcptun() {
 	download_file
 	unpack_file
-	rm -rf "$KCPTUN_LOG_DIR"
-	service supervisord restart
-	sleep 3
+	[ -d "$KCPTUN_LOG_DIR" ] && rm -f "$KCPTUN_LOG_DIR"/* || mkdir -p "$KCPTUN_LOG_DIR"
+	restart_supervisor
 	install_cleanup
 
 	show_installed_version
