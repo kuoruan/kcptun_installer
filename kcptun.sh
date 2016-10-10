@@ -1283,9 +1283,9 @@ get_kcptun_version_info() {
 get_shell_version_info() {
 	local shell_version_content=$(curl --silent --insecure --fail $SHELL_VERSION_INFO_URL)
 	if [ $? -eq 0 ]; then
-		new_shell_version=$(jq -r ".shell_version" | grep -oE "[0-9]+" <<< "$shell_version_content")
-		new_config_version=$(jq -r ".config_version" | grep -oE "[0-9]+" <<< "$shell_version_content")
-		new_init_version=$(jq -r ".init_version" | grep -oE "[0-9]+" <<< "$shell_version_content")
+		new_shell_version=$(jq -r ".shell_version" <<< "$shell_version_content" | grep -oE "[0-9]+" )
+		new_config_version=$(jq -r ".config_version" <<< "$shell_version_content" | grep -oE "[0-9]+" )
+		new_init_version=$(jq -r ".init_version" <<< "$shell_version_content" | grep -oE "[0-9]+")
 
 		shell_change_log=$(jq -r ".change_log" <<< "$shell_version_content")
 		config_change_log=$(jq -r ".config_change_log" <<< "$shell_version_content")

@@ -1,9 +1,9 @@
 {
-	"shell_version": 10,
-	"shell_url": "https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.sh",
-	"change_log": "1.支持在文件下载失败时手动下载安装文件;\n2.Wget添加断点续传参数;\n3.完善隐藏参数支持;\n4.修复一些BUG",
-	"config_version": 4,
-	"config_change_log": "1.使用json配置文件配置服务端;\n2.支持手动设置隐藏参数",
+	"shell_version": 11,
+	"shell_url": "https://raw.githubusercontent.com/kuoruan/kcptun_installer/v11/kcptun.sh",
+	"change_log": "1.添加多实例功能;\n2.查看参数时可以显示详细信息;\n3.简化脚本逻辑, 直接生成所有参数方便后期修改;\n4.修复一些BUG并添加一些BUG...",
+	"config_version": 5,
+	"config_change_log": "1.添加-log参数;\n2.配置文件现在包含所有参数;\n3.调整日志文件目录到/var/log/kcptun",
 	"init_version": 2,
 	"init_change_log": "1.重写Ubuntu和Debian的启动脚本;\n2.顺带重写了CentOS的启动脚本;\n3.如果出现无法启动或者关闭的情况, 请反馈给我"
 }
