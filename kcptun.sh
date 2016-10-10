@@ -337,16 +337,16 @@ set_listen_port() {
 		echo
 		if [ -n "$input" ]; then
 			if is_number $input && [ $input -ge 1 -a $input -le 65535 ]; then
-				if check_port $input; then
-					echo "端口已被占用, 请重新输入!"
-					continue
-				fi
-
 				listen_port="$input"
 			else
 				echo "输入有误, 请输入 1~65535 之间的数字!"
 				continue
 			fi
+		fi
+
+		if check_port $listen_port; then
+			echo "端口已被占用, 请重新输入!"
+			continue
 		fi
 
 		cat >&2 <<-EOF
@@ -433,31 +433,29 @@ set_target_port() {
 		echo
 		if [ -n "$input" ]; then
 			if is_number $input && [ $input -ge 1 -a $input -le 65535 ]; then
-
 				if [ $input -eq $listen_port ]; then
 					echo "加速端口不能和 Kcptun 端口一致!"
 					continue
-				fi
-
-				if [ "$target_ip" = "${DEFAULT[TARGET_IP]}" ]; then
-					if ! check_port $input; then
-						read -p "当前没有软件使用此端口, 确定加速此端口? [y/n]: " yn
-						[ -z "$yn" ] && yn="y"
-						case ${yn:0:1} in
-							y|Y)
-								;;
-							*)
-								continue
-								;;
-						esac
-					fi
-
 				fi
 
 				target_port=$input
 			else
 				echo "输入有误, 请输入 1~65535 之间的数字!"
 				continue
+			fi
+		fi
+
+		if [ "$target_ip" = "${DEFAULT[TARGET_IP]}" ]; then
+			if ! check_port $target_port; then
+				read -p "当前没有软件使用此端口, 确定加速此端口? [y/n]: " yn
+				[ -z "$yn" ] && yn="y"
+				case ${yn:0:1} in
+					y|Y)
+						;;
+					*)
+						continue
+						;;
+				esac
 			fi
 		fi
 
