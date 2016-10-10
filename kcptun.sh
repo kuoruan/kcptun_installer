@@ -198,7 +198,7 @@ disable_selinux() {
 exit_with_error() {
 	cat >&2 <<-'EOF'
 
-	Kcptun 服务端安装失败！
+	Kcptun 服务端安装或配置过程中出现错误!
 	希望你能记录下错误信息, 然后将错误信息发送给我
 	我的邮箱: kuoruan@gmail.com
 	反馈请加入QQ群: 43391448
@@ -238,7 +238,7 @@ installed_check() {
 
 	if [ -d /etc/supervisor/conf.d/ ]; then
 
-		instance_count=$(ls -l /etc/supervisor/conf.d/ | grep -P "^-.*kcptun[\d]*\.conf" | wc -l)
+		local instance_count=$(ls -l /etc/supervisor/conf.d/ | grep -P "^-.*kcptun[\d]*\.conf" | wc -l)
 		if [ $instance_count -gt 0 ] && [ -d /usr/share/kcptun/ ]; then
 			cat >&2 <<-EOF
 
@@ -247,13 +247,14 @@ installed_check() {
 			while :
 			do
 				cat >&2 <<-'EOF'
+
 				请选择你希望的操作:
 				(1) 覆盖安装
-				(2) 重新配置
+				(2) 重新配置实例
 				(3) 添加一个实例(多用户)
 				(4) 检查更新
-				(5) 查看当前配置
-				(6) 查看日志输出
+				(5) 查看实例配置
+				(6) 查看实例日志输出
 				(7) 手动输入版本安装
 				(8) 卸载
 				(9) 退出
@@ -269,10 +270,10 @@ installed_check() {
 							return 0
 							;;
 						2)
+							select_instance
 							reconfig_kcptun
 							;;
 						3)
-							current_count=$(($instance_count + 1))
 							add_instance
 							;;
 						4)
@@ -284,7 +285,7 @@ installed_check() {
 							;;
 						6)
 							select_instance
-							tail -n 20 -f "$KCPTUN_LOG_DIR"/server${current_count}.log
+							show_instance_log
 							;;
 						7)
 							manual_install
@@ -365,7 +366,6 @@ set_disable_ipv6() {
 
 		是否禁用 IPv6?
 		EOF
-		echo
 		read -p "(默认: 不禁用) [y/n]: " yn
 		echo
 		if [ -n "$yn" ]; then
@@ -477,10 +477,9 @@ set_key() {
 	请输入 Kcptun 密码
 	EOF
 	read -p "(默认密码: ${DEFAULT[KEY]}): " input
-	if [ "$input" != "${DEFAULT[KEY]}" ]; then
-		key="$input"
-	fi
 	echo
+	[ -n "$input" ] && key="$input"
+
 	cat >&2 <<-EOF
 	---------------------------
 	密码 = ${key}
@@ -765,6 +764,7 @@ set_resend() {
 		(3) 2次ACK跨越重传
 		EOF
 		read -p "(默认: 3) 请选择 [1~3]: " sel
+		echo
 		if [ -n "$sel" ]; then
 			case $sel in
 				1)
@@ -1582,7 +1582,7 @@ show_config_info() {
 generate_mobile_args() {
 	kcptun_mobile_args="-autoexpire 60"
 
-	[ "$key" != "${DEFAULT[KEY]}" ]                 && kcptun_mobile_args="${kcptun_mobile_args} -key \"${kcptun_pwd}\""
+	[ "$key" != "${DEFAULT[KEY]}" ]                 && kcptun_mobile_args="${kcptun_mobile_args} -key \"${key}\""
 	[ "$crypt" != "${DEFAULT[CRYPT]}" ]             && kcptun_mobile_args="${kcptun_mobile_args} -crypt \"${crypt}\""
 	[ "$mode" != "${DEFAULT[MODE]}" ]               && kcptun_mobile_args="${kcptun_mobile_args} -mode \"${mode}\""
 	[ "$mtu" != "${DEFAULT[MTU]}" ]                 && kcptun_mobile_args="${kcptun_mobile_args} -mtu ${mtu}"
@@ -1665,6 +1665,15 @@ add_instance() {
 	linux_check
 	get_arch
 	get_server_ip
+
+	cat >&2 <<-'EOF'
+
+	你选择了添加实例, 正在开始操作...
+	EOF
+
+	local instance_count=$(ls -l /etc/supervisor/conf.d/ | grep -P "^-.*kcptun[\d]*\.conf" | wc -l)
+	current_count=$(($instance_count + 1))
+
 	set_kcptun_config
 	config_kcptun
 	config_firewall
@@ -1674,7 +1683,7 @@ add_instance() {
 
 	cat >&2 <<-EOF
 
-	恭喜, 实例添加完成!
+	恭喜, 实例添加成功!
 	EOF
 
 	show_config_info
@@ -1778,6 +1787,7 @@ manual_install() {
 
 # 选择一个实例
 select_instance() {
+	local instance_count=$(ls -l /etc/supervisor/conf.d/ | grep -P "^-.*kcptun[\d]*\.conf" | wc -l)
 	if [ $instance_count -gt 1 ]; then
 		cat >&2 <<-'EOF'
 
@@ -1786,7 +1796,7 @@ select_instance() {
 
 		for ((i=1; i<=$instance_count; i++)); do
 			if [ $i -eq 1 ]; then
-				echo "($i) kcptun"
+				echo "(1) kcptun"
 			else
 				echo "($i) kcptun$i"
 			fi
@@ -1797,8 +1807,8 @@ select_instance() {
 			read -p "(默认: 1) 请选择 [1~$instance_count]: " sel
 			if [ -n "$sel" ]; then
 				if is_number $sel && [ $sel -ge 1 -a $sel -le $instance_count ]; then
-					if [ $sel -gt 1 ]; then
-						current_count="$sel"
+					if [ $sel -ne 1 ]; then
+						current_count=$sel
 					fi
 				else
 					cat >&2 <<-EOF
@@ -1821,8 +1831,38 @@ show_instance_config() {
 	get_server_ip
 	get_installed_version
 
-	local count=${1:-$current_count}
-	local config_file="$KCPTUN_INSTALL_DIR"/server-config"$count".json
+	cat >&2 <<-'EOF'
+
+	你选择了查看实例配置, 正在读取...
+	EOF
+
+	local instance_count=$(ls -l /etc/supervisor/conf.d/ | grep -P "^-.*kcptun[\d]*\.conf" | wc -l)
+	if [ -n "$1" ]; then
+		if is_number $1 && [ $1 -ge 1 -a $1 -le $instance_count ]; then
+			if [ $1 -ne 1 ]; then
+				current_count=$1
+			fi
+		else
+			cat >&2 <<-EOF
+
+			参数有误, 请使用 $0 show [id]
+			[id] 为实例序号, 当前共有 ${instance_count} 个实例
+			EOF
+
+			exit 1
+		fi
+	fi
+
+	local config_file="$KCPTUN_INSTALL_DIR"/server-config"$current_count".json
+	if [ ! -s "$config_file" ]; then
+		cat >&2 <<-'EOF'
+
+		实例配置文件不存在或为空, 请检查!
+		EOF
+
+		exit_with_error
+	fi
+
 	local lines=$(jq -r 'to_entries | map("\(.key)=\(.value | @sh)") | .[]' "$config_file")
 
 	while read -r line
@@ -1842,9 +1882,28 @@ show_instance_config() {
 	show_config_info
 }
 
+# 显示实例日志
+show_instance_log() {
+	local log_file="$KCPTUN_LOG_DIR"/server${current_count}.log
+
+	if [ -f "$log_file" ]; then
+		tail -n 20 -f "$log_file"
+	else
+		cat >&2 <<-EOF
+
+		未找到所选实例的日志文件...
+		EOF
+
+		exit 1
+	fi
+}
+
 show_installed_version() {
-	[ -n "$installed_kcptun_version" ] && echo "当前安装的 Kcptun 版本为: ${installed_kcptun_version}"
-	[ -n "$kcptun_release_html_url" ]  && echo "请前往 ${kcptun_release_html_url} 手动下载客户端文件"
+	cat >&2 <<-EOF
+
+	当前安装的 Kcptun 版本为: ${installed_kcptun_version}
+	$([ -n "$kcptun_release_html_url" ]  && echo "请前往 ${kcptun_release_html_url} 手动下载客户端文件")
+	EOF
 }
 
 get_installed_version() {
@@ -1860,6 +1919,7 @@ get_installed_version() {
 		cat >&2 <<-'EOF'
 
 		未找到已安装的 Kcptun 服务端执行文件, 或许你并没有安装 Kcptun?
+		请运行脚本来重新安装 Kcptun 服务端
 		EOF
 		exit_with_error
 	fi
@@ -2005,9 +2065,9 @@ uninstall_kcptun() {
 
 	[ "$OS" = "CentOS" ] && chkconfig supervisord off || update-rc.d -f supervisord remove
 
-	rm -f /etc/supervisor/conf.d/kcptun.conf
+	rm -f /etc/supervisor/conf.d/kcptun*.conf
 	rm -rf $KCPTUN_INSTALL_DIR
-	rm -f $KCPTUN_LOG_DIR
+	rm -rf $KCPTUN_LOG_DIR
 	cat >&2 <<-'EOF'
 
 	Kcptun 服务端卸载完成！欢迎再次使用。
@@ -2044,11 +2104,31 @@ reconfig_kcptun() {
 	linux_check
 	get_server_ip
 	get_arch
-	set_kcptun_config
+
 	cat >&2 <<-'EOF'
 
-	正在写入新的配置...
+	你选择了重新配置实例, 正在开始操作...
 	EOF
+
+	local instance_count=$(ls -l /etc/supervisor/conf.d/ | grep -P "^-.*kcptun[\d]*\.conf" | wc -l)
+
+	if [ -n "$1" ]; then
+		if is_number $1 && [ $1 -ge 1 -a $1 -le $instance_count ]; then
+			if [ $1 -ne 1 ]; then
+				current_count=$1
+			fi
+		else
+			cat >&2 <<-EOF
+
+			参数有误, 请使用 $0 reconfig [id]
+			[id] 为实例序号, 当前共有 ${instance_count} 个实例
+			EOF
+
+			exit 1
+		fi
+	fi
+
+	set_kcptun_config
 	config_kcptun
 	config_firewall
 
@@ -2077,13 +2157,16 @@ case $action in
 		check_update
 		;;
 	reconfig)
-		reconfig_kcptun
+		reconfig_kcptun $2
 		;;
 	manual)
 		manual_install $2
 		;;
 	show)
-		show_instance_config
+		show_instance_config $2
+		;;
+	add)
+		add_instance
 		;;
 	*)
 		cat >&2 <<-EOF
