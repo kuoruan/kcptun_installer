@@ -548,8 +548,8 @@ set_crypt() {
 		read -p "(默认: ${DEFAULT[CRYPT]}) 请选择 [1~$i]: " sel
 		echo
 		if [ -n "$sel" ]; then
-			if is_number $sel && [ $sel -gt 0 -a $sel -lt $i ]; then
-				crypt=${CRYPTS[$sel]}
+			if is_number $sel && [ $sel -ge 1 -a $sel -le $i ]; then
+				crypt=${CRYPTS[$(($sel - 1))]}
 			else
 				echo "请输入有效数字 1~$i!"
 				continue
@@ -578,11 +578,11 @@ set_mode() {
 			echo "($(($i + 1))) ${MODES[$i]}"
 		done
 
-		read -p "(默认: ${DEFAULT[MODE]}) 请选择 [1~5]: " sel
+		read -p "(默认: ${DEFAULT[MODE]}) 请选择 [1~$i]: " sel
 		echo
 		if [ -n "$sel" ]; then
-			if is_number $sel && [ $sel -gt 0 -a $sel -lt $i ]; then
-				mode=${MODES[$sel]}
+			if is_number $sel && [ $sel -ge 1 -a $sel -le $i ]; then
+				mode=${MODES[$(($sel - 1))]}
 			else
 				echo "请输入有效数字 1~$i!"
 				continue
@@ -1312,7 +1312,7 @@ download_file(){
 	fi
 
 	if ! wget --no-check-certificate -c -t 3 -O "$kcptun_file_name" "$kcptun_release_download_url"; then
-		cat >&2 <<-'EOF'
+		cat >&2 <<-EOF
 
 		下载 Kcptun 文件压缩包失败, 你可以尝试手动下载文件:
 		1. 下载 ${kcptun_release_download_url}
