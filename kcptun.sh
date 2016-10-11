@@ -21,7 +21,7 @@ export PATH
 
 ## 定义常量
 
-SHELL_VERSION=11
+SHELL_VERSION=12
 CONFIG_VERSION=5
 INIT_VERSION=2
 
@@ -57,6 +57,29 @@ declare -Ar DEFAULT=(
 	[KEEPALIVE]=10
 )
 
+declare -ar CRYPTS=(
+	"aes"
+	"aes-128"
+	"aes-192"
+	"salsa20"
+	"blowfish"
+	"twofish"
+	"cast5"
+	"3des"
+	"tea"
+	"xtea"
+	"xor"
+	"none"
+)
+
+declare -ar MODES=(
+	"normal"
+	"fast"
+	"fast2"
+	"fast3"
+	"manual"
+)
+
 # 初始化参数
 listen_port=${DEFAULT[LISTEN]}
 target_ip=${DEFAULT[TARGET_IP]}
@@ -87,9 +110,9 @@ cat >&2 <<-'EOF'
 #########################################################
 # Kcptun 服务端一键安装脚本                             #
 # 该脚本支持 Kcptun 服务端的安装、更新、卸载及配置      #
-# 官方网站: https://blog.kuoruan.com/                   #
 # 脚本作者: Index <kuoruan@gmail.com>                   #
-# 致谢: 脚本编写过程中参考了 @teddysun 的SS一键安装脚本 #
+# 作者博客: https://blog.kuoruan.com/                   #
+# Github: https://github.com/kuoruan/kcptun_installer   #
 # QQ交流群: 43391448                                    #
 #########################################################
 EOF
@@ -102,6 +125,35 @@ command_exists() {
 # 检查变量是否为数字
 is_number() {
 	expr $1 + 1 >/dev/null 2>&1
+}
+
+# 获取实例数量
+get_instance_count() {
+	ls -l /etc/supervisor/conf.d/ | grep -P "^-.*kcptun[\d]*\.conf" | wc -l
+}
+
+# 获取当前配置文件
+get_current_config_file() {
+	echo "${KCPTUN_INSTALL_DIR}/server-config${current_count}.json"
+}
+
+# 获取当前日志文件
+get_current_log_file() {
+	echo "${KCPTUN_LOG_DIR}/server${current_count}.log"
+}
+
+# 获取当前监听端口
+get_current_listen_port() {
+	local config_file="$(get_current_config_file)"
+
+	if [ -f "$config_file" ]; then
+		local listen=$(jq -r ".listen" "$config_file")
+		local current_listen_port=$(cut -d ':' -f2 <<< "$listen")
+
+		if [ -n "$current_listen_port" ] && is_number $current_listen_port; then
+			echo "$current_listen_port"
+		fi
+	fi
 }
 
 # 检查当前用户是否拥有管理员权限
@@ -200,9 +252,9 @@ exit_with_error() {
 
 	Kcptun 服务端安装或配置过程中出现错误!
 	希望你能记录下错误信息, 然后将错误信息发送给我
-	我的邮箱: kuoruan@gmail.com
-	反馈请加入QQ群: 43391448
-	扩软博客：https://blog.kuoruan.com
+	QQ群: 43391448
+	邮箱: kuoruan@gmail.com
+	博客: https://blog.kuoruan.com/
 	EOF
 	exit 1
 }
@@ -237,8 +289,8 @@ installed_check() {
 	fi
 
 	if [ -d /etc/supervisor/conf.d/ ]; then
+		local instance_count=$(get_instance_count)
 
-		local instance_count=$(ls -l /etc/supervisor/conf.d/ | grep -P "^-.*kcptun[\d]*\.conf" | wc -l)
 		if [ $instance_count -gt 0 ] && [ -d /usr/share/kcptun/ ]; then
 			cat >&2 <<-EOF
 
@@ -255,55 +307,50 @@ installed_check() {
 				(4) 检查更新
 				(5) 查看实例配置
 				(6) 查看实例日志输出
-				(7) 手动输入版本安装
+				(7) 自定义版本安装
 				(8) 卸载
 				(9) 退出
 				EOF
-				read -p "(默认: 1) 请选择 [1~8]: " sel
+				read -p "(默认: 1) 请选择 [1~9]: " sel
 				echo
 				[ -z "$sel" ] && sel=1
 
-				if is_number $sel; then
-					case $sel in
-						1)
-							echo "开始覆盖安装 Kcptun 服务端..."
-							return 0
-							;;
-						2)
-							select_instance
-							reconfig_kcptun
-							;;
-						3)
-							add_instance
-							;;
-						4)
-							check_update
-							;;
-						5)
-							select_instance
-							show_instance_config
-							;;
-						6)
-							select_instance
-							show_instance_log
-							;;
-						7)
-							manual_install
-							;;
-						8)
-							uninstall_kcptun
-							;;
-						9)
-							;;
-						*)
-							echo "请输入有效数字 1~9!"
-							continue
-							;;
-					esac
-				else
-					echo "输入有误, 请输入数字!"
-					continue
-				fi
+				case $sel in
+					1)
+						echo "开始覆盖安装 Kcptun 服务端..."
+						return 0
+						;;
+					2)
+						select_instance
+						reconfig_kcptun
+						;;
+					3)
+						add_instance
+						;;
+					4)
+						check_update
+						;;
+					5)
+						select_instance
+						show_instance_config
+						;;
+					6)
+						select_instance
+						show_instance_log
+						;;
+					7)
+						manual_install
+						;;
+					8)
+						uninstall_kcptun
+						;;
+					9)
+						;;
+					*)
+						echo "输入有误, 请输入有效数字 1~9!"
+						continue
+						;;
+				esac
 
 				exit 0
 			done
@@ -344,7 +391,7 @@ set_listen_port() {
 			fi
 		fi
 
-		if check_port $listen_port; then
+		if check_port $listen_port && [ "$listen_port" != "$(get_current_listen_port)" ]; then
 			echo "端口已被占用, 请重新输入!"
 			continue
 		fi
@@ -492,64 +539,21 @@ set_crypt() {
 		cat >&2 <<-'EOF'
 
 		请选择加密方式(crypt):
-		(1) aes
-		(2) aes-128
-		(3) aes-192
-		(4) salsa20
-		(5) blowfish
-		(6) twofish
-		(7) cast5
-		(8) 3des
-		(9) tea
-		(10) xtea
-		(11) xor
-		(12) none
 		EOF
-		read -p "(默认: ${DEFAULT[CRYPT]}) 请选择 [1~12]: " sel
+
+		for ((i=0; i<${#CRYPTS[@]}; i++)); do
+			echo "($(($i + 1))) ${CRYPTS[$i]}"
+		done
+
+		read -p "(默认: ${DEFAULT[CRYPT]}) 请选择 [1~$i]: " sel
 		echo
 		if [ -n "$sel" ]; then
-			case $sel in
-				1)
-					crypt="aes"
-					;;
-				2)
-					crypt="aes-128"
-					;;
-				3)
-					crypt="aes-192"
-					;;
-				4)
-					crypt="salsa20"
-					;;
-				5)
-					crypt="blowfish"
-					;;
-				6)
-					crypt="twofish"
-					;;
-				7)
-					crypt="cast5"
-					;;
-				8)
-					crypt="3des"
-					;;
-				9)
-					crypt="tea"
-					;;
-				10)
-					crypt="xtea"
-					;;
-				11)
-					crypt="xor"
-					;;
-				12)
-					crypt="none"
-					;;
-				*)
-					echo "请输入有效数字 1~12!"
-					continue
-					;;
-			esac
+			if is_number $sel && [ $sel -gt 0 -a $sel -lt $i ]; then
+				crypt=${CRYPTS[$sel]}
+			else
+				echo "请输入有效数字 1~$i!"
+				continue
+			fi
 		fi
 
 		cat >&2 <<-EOF
@@ -568,36 +572,21 @@ set_mode() {
 		cat >&2 <<-'EOF'
 
 		请选择加速模式(mode):
-		(1) fast3
-		(2) fast2
-		(3) fast
-		(4) normal
-		(5) manual
 		EOF
+
+		for ((i=0; i<${#MODES[@]}; i++)); do
+			echo "($(($i + 1))) ${MODES[$i]}"
+		done
+
 		read -p "(默认: ${DEFAULT[MODE]}) 请选择 [1~5]: " sel
 		echo
 		if [ -n "$sel" ]; then
-			case $sel in
-				1)
-					mode="fast3"
-					;;
-				2)
-					mode="fast2"
-					;;
-				3)
-					mode="fast"
-					;;
-				4)
-					mode="normal"
-					;;
-				5)
-					mode="manual"
-					;;
-				*)
-					echo "请输入有效数字 1~5!"
-					continue
-					;;
-			esac
+			if is_number $sel && [ $sel -gt 0 -a $sel -lt $i ]; then
+				mode=${MODES[$sel]}
+			else
+				echo "请输入有效数字 1~$i!"
+				continue
+			fi
 		fi
 
 		cat >&2 <<-EOF
@@ -1410,18 +1399,18 @@ config_kcptun() {
 		    "nc": ${nc},
 		    "sockbuf": ${sockbuf},
 		    "keepalive": ${keepalive},
-		    "log": "${KCPTUN_LOG_DIR}/server${current_count}.log"
+		    "log": "$(get_current_log_file)"
 		}
 		EOF
 
 		cat > /etc/supervisor/conf.d/kcptun"$current_count".conf<<-EOF
 		[program:kcptun${current_count}]
 		directory=${KCPTUN_INSTALL_DIR}
-		command=${KCPTUN_INSTALL_DIR}/server_${FILE_SUFFIX} -c ${KCPTUN_INSTALL_DIR}/server-config${current_count}.json
+		command=${KCPTUN_INSTALL_DIR}/server_${FILE_SUFFIX} -c "$(get_current_config_file)"
 		process_name=%(program_name)s
 		autostart=true
 		redirect_stderr=true
-		stdout_logfile=${KCPTUN_LOG_DIR}/server${current_count}.log
+		stdout_logfile=$(get_current_log_file)
 		stdout_logfile_maxbytes=1MB
 		stdout_logfile_backups=0
 		EOF
@@ -1451,7 +1440,7 @@ downlod_init_script() {
 	if ! wget --no-check-certificate -O /etc/init.d/supervisord "$init_file_url"; then
 		cat >&2 <<-'EOF'
 
-		下载 Supervisor 自启脚本失败!
+		下载 Supervisor init 脚本失败!
 		EOF
 		exit_with_error
 	fi
@@ -1515,7 +1504,7 @@ config_firewall() {
 	else
 		cat >&2 <<-EOF
 
-		未发现已安装的 iptables
+		iptables 未安装
 		EOF
 	fi
 
@@ -1527,14 +1516,14 @@ config_firewall() {
 		else
 			cat >&2 <<-EOF
 
-			Firewalld 未启动或未配置
+			firewalld 未启动或未配置
 			如果有必要, 请手动添加端口 ${target_port} 的防火墙规则!
 			EOF
 		fi
 	else
 		cat >&2 <<-'EOF'
 
-		未发现已安装的 Firewalld
+		firewalld 未安装
 		EOF
 	fi
 }
@@ -1643,14 +1632,11 @@ show_installed_info() {
 	Kcptun 安装目录: ${KCPTUN_INSTALL_DIR}
 	Kcptun 日志目录: ${KCPTUN_LOG_DIR}
 
-	Supervisor {启动|关闭|重启|查看状态} 命令: service supervisord {start|stop|restart|status}
-	Kcptun 服务端 {启动|关闭|重启|查看状态} 命令: supervisorctl {start|stop|restart|status} kcptun
 	已将 Supervisor 加入开机自启, Kcptun 服务端会随 Supervisor 的启动而启动
 
-	如需 {重新配置|更新|卸载|手动选择版本|查看配置}, 请使用: ${0} {reconfig|update|uninstall|manual|show}
+	更多使用说明: ${0} help
 
 	欢迎访问扩软博客: https://blog.kuoruan.com/
-
 	我们的QQ群: 43391448
 
 	尽情使用吧！
@@ -1669,8 +1655,7 @@ add_instance() {
 	你选择了添加实例, 正在开始操作...
 	EOF
 
-	local instance_count=$(ls -l /etc/supervisor/conf.d/ | grep -P "^-.*kcptun[\d]*\.conf" | wc -l)
-	current_count=$(($instance_count + 1))
+	current_count=$(($(get_instance_count) + 1))
 
 	set_kcptun_config
 	config_kcptun
@@ -1716,11 +1701,13 @@ install_kcptun() {
 update_kcptun() {
 	download_file
 	unpack_file
+
 	[ -d "$KCPTUN_LOG_DIR" ] && rm -f "$KCPTUN_LOG_DIR"/* || mkdir -p "$KCPTUN_LOG_DIR"
+
 	restart_supervisor
 	install_cleanup
-
 	show_installed_version
+
 	cat >&2 <<-EOF
 
 	恭喜, Kcptun 服务端更新完毕!
@@ -1732,6 +1719,11 @@ manual_install() {
 	permission_check
 	linux_check
 	get_arch
+
+	cat >&2 <<-'EOF'
+
+	你选择了自定义版本安装, 正在开始操作...
+	EOF
 
 	local tag_name=$1
 	while :
@@ -1785,7 +1777,8 @@ manual_install() {
 
 # 选择一个实例
 select_instance() {
-	local instance_count=$(ls -l /etc/supervisor/conf.d/ | grep -P "^-.*kcptun[\d]*\.conf" | wc -l)
+	local instance_count=$(get_instance_count)
+
 	if [ $instance_count -gt 1 ]; then
 		cat >&2 <<-'EOF'
 
@@ -1802,7 +1795,7 @@ select_instance() {
 
 		while :
 		do
-			read -p "(默认: 1) 请选择 [1~$instance_count]: " sel
+			read -p "(默认: 1) 请选择 [1~${instance_count}]: " sel
 			if [ -n "$sel" ]; then
 				if is_number $sel && [ $sel -ge 1 -a $sel -le $instance_count ]; then
 					if [ $sel -ne 1 ]; then
@@ -1821,37 +1814,10 @@ select_instance() {
 	fi
 }
 
-# 显示配置信息
-show_instance_config() {
-	permission_check
-	linux_check
-	get_arch
-	get_server_ip
-	get_installed_version
+# 加载实例配置信息
+load_instance_config() {
+	local config_file="$(get_current_config_file)"
 
-	cat >&2 <<-'EOF'
-
-	你选择了查看实例配置, 正在读取...
-	EOF
-
-	local instance_count=$(ls -l /etc/supervisor/conf.d/ | grep -P "^-.*kcptun[\d]*\.conf" | wc -l)
-	if [ -n "$1" ]; then
-		if is_number $1 && [ $1 -ge 1 -a $1 -le $instance_count ]; then
-			if [ $1 -ne 1 ]; then
-				current_count=$1
-			fi
-		else
-			cat >&2 <<-EOF
-
-			参数有误, 请使用 $0 show [id]
-			[id] 为实例序号, 当前共有 ${instance_count} 个实例
-			EOF
-
-			exit 1
-		fi
-	fi
-
-	local config_file="$KCPTUN_INSTALL_DIR"/server-config"$current_count".json
 	if [ ! -s "$config_file" ]; then
 		cat >&2 <<-'EOF'
 
@@ -1861,6 +1827,7 @@ show_instance_config() {
 		exit_with_error
 	fi
 
+	local line
 	local lines=$(jq -r 'to_entries | map("\(.key)=\(.value | @sh)") | .[]' "$config_file")
 
 	while read -r line
@@ -1873,6 +1840,38 @@ show_instance_config() {
 		target_ip=$(cut -d ':' -f1 <<< "$target")
 		target_port=$(cut -d ':' -f2 <<< "$target")
 	}
+}
+
+# 显示配置信息
+show_instance_config() {
+	permission_check
+	get_arch
+	get_server_ip
+	get_installed_version
+
+	cat >&2 <<-'EOF'
+
+	你选择了查看实例配置, 正在读取...
+	EOF
+
+	local instance_count=$(get_instance_count)
+	if [ -n "$1" ]; then
+		if is_number $1 && [ $1 -ge 1 -a $1 -le $instance_count ]; then
+			if [ $1 -ne 1 ]; then
+				current_count=$1
+			fi
+		else
+			cat >&2 <<-EOF
+
+			参数有误, 请使用 $0 show <id>
+			<id> 为实例序号, 当前共有 ${instance_count} 个实例
+			EOF
+
+			exit 1
+		fi
+	fi
+
+	load_instance_config
 
 	if [ -n "$current_count" ]; then
 		echo "实例 ${current_count} 的配置信息如下(仅显示非默认值): "
@@ -1882,7 +1881,30 @@ show_instance_config() {
 
 # 显示实例日志
 show_instance_log() {
-	local log_file="$KCPTUN_LOG_DIR"/server${current_count}.log
+	cat >&2 <<-'EOF'
+
+	你选择了查看实例日志, 正在读取...
+	EOF
+
+	local instance_count=$(get_instance_count)
+
+	if [ -n "$1" ]; then
+		if is_number $1 && [ $1 -ge 1 -a $1 -le $instance_count ]; then
+			if [ $1 -ne 1 ]; then
+				current_count=$1
+			fi
+		else
+			cat >&2 <<-EOF
+
+			参数有误, 请使用 $0 log <id>
+			<id> 为实例序号, 当前共有 ${instance_count} 个实例
+			EOF
+
+			exit 1
+		fi
+	fi
+
+	local log_file="$(get_current_log_file)"
 
 	if [ -f "$log_file" ]; then
 		tail -n 20 -f "$log_file"
@@ -2063,9 +2085,9 @@ uninstall_kcptun() {
 
 	[ "$OS" = "CentOS" ] && chkconfig supervisord off || update-rc.d -f supervisord remove
 
-	rm -f /etc/supervisor/conf.d/kcptun*.conf
-	rm -rf $KCPTUN_INSTALL_DIR
-	rm -rf $KCPTUN_LOG_DIR
+	rm -f "/etc/supervisor/conf.d/kcptun*.conf"
+	rm -rf "$KCPTUN_INSTALL_DIR"
+	rm -rf "$KCPTUN_LOG_DIR"
 	cat >&2 <<-'EOF'
 
 	Kcptun 服务端卸载完成！欢迎再次使用。
@@ -2108,18 +2130,18 @@ reconfig_kcptun() {
 	你选择了重新配置实例, 正在开始操作...
 	EOF
 
-	local instance_count=$(ls -l /etc/supervisor/conf.d/ | grep -P "^-.*kcptun[\d]*\.conf" | wc -l)
-
 	if [ -n "$1" ]; then
-		if is_number $1 && [ $1 -ge 1 -a $1 -le $instance_count ]; then
+		local instance_count=$(get_instance_count)
+
+		if is_number $1 && [ $1 -ge 1 -a $1 -le instance_count ]; then
 			if [ $1 -ne 1 ]; then
 				current_count=$1
 			fi
 		else
 			cat >&2 <<-EOF
 
-			参数有误, 请使用 $0 reconfig [id]
-			[id] 为实例序号, 当前共有 ${instance_count} 个实例
+			参数有误, 请使用 $0 reconfig <id>
+			<id> 为实例序号, 当前共有 ${instance_count} 个实例
 			EOF
 
 			exit 1
@@ -2130,7 +2152,10 @@ reconfig_kcptun() {
 	config_kcptun
 	config_firewall
 
-	touch "$KCPTUN_LOG_FILE" && echo > "$KCPTUN_LOG_dir"/server"$current_count".log
+	[ -d "$KCPTUN_LOG_DIR" ] || mkdir -p "$KCPTUN_LOG_DIR"
+
+	local log_file="$(get_current_log_file)"
+	touch "$log_file" && echo > "$log_file"
 	restart_supervisor
 
 	cat >&2 <<-'EOF'
@@ -2140,6 +2165,32 @@ reconfig_kcptun() {
 	get_installed_version
 	generate_mobile_args
 	show_installed_info
+}
+
+usage() {
+	cat >&2 <<-EOF
+
+	请使用: $0 <option>
+
+	可使用的参数包括 (尖括号为可选):
+
+	    install          安装
+	    uninstall        卸载
+	    update           检查更新
+	    manual           自定义 Kcptun 版本安装
+	    help             查看脚本使用说明
+	    add              添加一个实例, 多用户使用
+	    reconfig <id>    重新配置实例, <id> 为实例序号
+	    show <id>        显示实例详细配置, <id> 为实例序号
+	    log <id>         显示实例日志, <id> 为实例序号
+
+	Supervisor 命令:
+	    service supervisord {start|stop|restart|status}
+	                        {启动|关闭|重启|查看状态}
+	Kcptun 相关命令:
+	    supervisorctl {start|stop|restart|status} kcptun<id>
+	                  {启动|关闭|重启|查看状态}
+	EOF
 }
 
 # 初始化脚本动作
@@ -2163,14 +2214,14 @@ case $action in
 	show)
 		show_instance_config $2
 		;;
+	log)
+		show_instance_log $2
+		;;
 	add)
 		add_instance
 		;;
-	*)
-		cat >&2 <<-EOF
-		参数错误！ [${action}]
-		请使用: $0 {install|uninstall|update|reconfig|manual|show}
-		EOF
+	help|*)
+		usage
 		;;
 esac
 
