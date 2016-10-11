@@ -302,11 +302,11 @@ installed_check() {
 
 				请选择你希望的操作:
 				(1) 覆盖安装
-				(2) 重新配置实例
-				(3) 添加一个实例(多用户)
+				(2) 重新配置
+				(3) 添加实例(多用户)
 				(4) 检查更新
-				(5) 查看实例配置
-				(6) 查看实例日志输出
+				(5) 查看配置
+				(6) 查看日志输出
 				(7) 自定义版本安装
 				(8) 卸载
 				(9) 退出
@@ -424,7 +424,7 @@ set_disable_ipv6() {
 					unset listen_addr
 					;;
 				*)
-					echo "输入有误, 请重新输入！"
+					echo "输入有误, 请重新输入!"
 					continue
 					;;
 			esac
@@ -800,7 +800,7 @@ set_nc() {
 					nc=0
 					;;
 				*)
-					echo "输入有误, 请重新输入！"
+					echo "输入有误, 请重新输入!"
 					continue
 					;;
 			esac
@@ -826,7 +826,7 @@ set_mtu() {
 		echo
 		if [ -n "$input" ]; then
 			if ! is_number $input || [ $input -le 0 ]; then
-				echo "输入有误, 请输入大于0的数字！"
+				echo "输入有误, 请输入大于0的数字!"
 				continue
 			fi
 
@@ -853,7 +853,7 @@ set_sndwnd() {
 		echo
 		if [ -n "$input" ]; then
 			if ! is_number $input || [ $input -le 0 ]; then
-				echo "输入有误, 请输入大于0的数字！"
+				echo "输入有误, 请输入大于0的数字!"
 				continue
 			fi
 
@@ -961,7 +961,7 @@ set_dscp() {
 		echo
 		if [ -n "$input" ]; then
 			if ! is_number $input || [ $input -lt 0 ]; then
-				echo "输入有误, 请输入大于等于0的数字！"
+				echo "输入有误, 请输入大于等于0的数字!"
 				continue
 			fi
 
@@ -1039,7 +1039,7 @@ set_acknodelay() {
 					acknodelay="false"
 					;;
 				*)
-					echo "输入有误, 请重新输入！"
+					echo "输入有误, 请重新输入!"
 					continue
 					;;
 			esac
@@ -1144,7 +1144,7 @@ set_kcptun_config() {
 				n|N)
 					;;
 				*)
-					echo "输入有误, 请重新输入！"
+					echo "输入有误, 请重新输入!"
 					continue
 					;;
 			esac
@@ -1259,7 +1259,7 @@ get_kcptun_version_info() {
 		else
 			cat >&2 <<-'EOF'
 
-			获取 Kcptun 版本信息失败, 请检查你的网络连接！
+			获取 Kcptun 版本信息失败, 请检查你的网络连接!
 			EOF
 			exit_with_error
 		fi
@@ -1314,8 +1314,7 @@ download_file(){
 	if ! wget --no-check-certificate -c -t 3 -O "$kcptun_file_name" "$kcptun_release_download_url"; then
 		cat >&2 <<-'EOF'
 
-		下载 Kcptun 文件压缩包失败！
-		你可以尝试手动下载文件:
+		下载 Kcptun 文件压缩包失败, 你可以尝试手动下载文件:
 		1. 下载 ${kcptun_release_download_url}
 		2. 将文件重命名为 ${file_name}
 		3. 上传文件至脚本当前目录 ${CUR_DIR}
@@ -1639,7 +1638,7 @@ show_installed_info() {
 	欢迎访问扩软博客: https://blog.kuoruan.com/
 	我们的QQ群: 43391448
 
-	尽情使用吧！
+	尽情使用吧!
 	EOF
 }
 
@@ -1827,7 +1826,23 @@ load_instance_config() {
 		exit_with_error
 	fi
 
-	local line
+	if ! command_exists jq; then
+		cat >&2 <<-'EOF'
+
+		jq 命令未安装, 脚本无法正常运行, 请手动安装之后重试.
+		EOF
+		exit_with_error
+	fi
+
+	if ! $(jq -r '.' "$config_file" >/dev/null 2>&1); then
+		cat >&2 <<-EOF
+
+		实例配置文件存在错误, 请检查!
+		配置文件路径: ${config_file}
+		EOF
+		exit_with_error
+	fi
+
 	local lines=$(jq -r 'to_entries | map("\(.key)=\(.value | @sh)") | .[]' "$config_file")
 
 	while read -r line
@@ -1876,7 +1891,11 @@ show_instance_config() {
 	if [ -n "$current_count" ]; then
 		echo "实例 ${current_count} 的配置信息如下(仅显示非默认值): "
 	fi
+	get_installed_version
+	generate_mobile_args
 	show_config_info
+	show_installed_version
+	show_recommend_config
 }
 
 # 显示实例日志
@@ -2090,7 +2109,7 @@ uninstall_kcptun() {
 	rm -rf "$KCPTUN_LOG_DIR"
 	cat >&2 <<-'EOF'
 
-	Kcptun 服务端卸载完成！欢迎再次使用。
+	Kcptun 服务端卸载完成, 欢迎再次使用。
 	EOF
 }
 
@@ -2101,7 +2120,7 @@ restart_supervisor() {
 		if ! service supervisord restart; then
 			cat >&2 <<-'EOF'
 
-			重启 Supervisor 失败, Kcptun 无法正常启动！
+			重启 Supervisor 失败, Kcptun 无法正常启动!
 			EOF
 
 			exit_with_error
@@ -2133,7 +2152,7 @@ reconfig_kcptun() {
 	if [ -n "$1" ]; then
 		local instance_count=$(get_instance_count)
 
-		if is_number $1 && [ $1 -ge 1 -a $1 -le instance_count ]; then
+		if is_number $1 && [ $1 -ge 1 -a $1 -le $instance_count ]; then
 			if [ $1 -ne 1 ]; then
 				current_count=$1
 			fi
@@ -2148,9 +2167,56 @@ reconfig_kcptun() {
 		fi
 	fi
 
-	set_kcptun_config
-	config_kcptun
-	config_firewall
+	while :
+	do
+		cat >&2 <<-'EOF'
+
+		请选择操作:
+		(1) 全部重新配置
+		(2) 直接修改配置文件
+		EOF
+		read -p "(默认: 1) 请选择: " sel
+		echo
+		if [ -n "$sel" ]; then
+			case ${sel:0:1} in
+				1)
+					;;
+				2)
+					echo "正在打开配置文件, 请手动修改..."
+					local config_file="$(get_current_config_file)"
+
+					if [ -f "$config_file" ]; then
+						if command_exists vim; then
+							vim "$config_file"
+							load_instance_config
+							break
+						elif command_exists vi; then
+							vi "$config_file"
+							load_instance_config
+							break
+						elif command_exists gedit; then
+							gedit "$config_file"
+							load_instance_config
+							break
+						else
+							echo "未找到可用的编辑器, 正在进入全新配置..."
+						fi
+					else
+						echo "配置文件不存在, 正在进入全新配置..."
+					fi
+					;;
+				*)
+					echo "输入有误, 请重新输入!"
+					continue
+					;;
+			esac
+		fi
+
+		set_kcptun_config
+		config_kcptun
+		config_firewall
+		break
+	done
 
 	[ -d "$KCPTUN_LOG_DIR" ] || mkdir -p "$KCPTUN_LOG_DIR"
 
@@ -2164,7 +2230,9 @@ reconfig_kcptun() {
 	EOF
 	get_installed_version
 	generate_mobile_args
-	show_installed_info
+	show_config_info
+	show_installed_version
+	show_recommend_config
 }
 
 usage() {
