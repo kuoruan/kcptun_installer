@@ -1874,8 +1874,8 @@ show_instance_config() {
 		target_port=$(cut -d ':' -f2 <<< "$target")
 	}
 
-	if [ -n "$count" ] && is_number $count && [ $count -gt 1 ]; then
-		echo "实例 ${count} 的配置信息如下(仅显示非默认值): "
+	if [ -n "$current_count" ]; then
+		echo "实例 ${current_count} 的配置信息如下(仅显示非默认值): "
 	fi
 	show_config_info
 }
