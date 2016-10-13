@@ -364,9 +364,9 @@ check_port() {
 	local port=$1
 
 	if command_exists netstat; then
-		return $(netstat -ntul | grep -qE "[0-9:]:${port} " >/dev/null 2>&1)
+		return $(netstat -ntul | grep -qE "[0-9:]:${port}\s" >/dev/null 2>&1)
 	elif command_exists ss; then
-		return $(ss -ntul | grep -qE "[0-9:]:${port} " >/dev/null 2>&1)
+		return $(ss -ntul | grep -qE "[0-9:]:${port}\s" >/dev/null 2>&1)
 	else
 		return 1
 	fi
@@ -1190,7 +1190,7 @@ install_dependence() {
 		}
 	fi
 
-	if ! pip install --upgrade supervisor; then
+	if ! pip install supervisor; then
 		cat >&2 <<-'EOF'
 
 		安装 Supervisor 失败!
