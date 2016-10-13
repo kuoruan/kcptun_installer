@@ -1190,7 +1190,7 @@ install_dependence() {
 		}
 	fi
 
-	if ! easy_install install supervisor; then
+	if ! easy_install supervisor; then
 		cat >&2 <<-'EOF'
 
 		安装 Supervisor 失败!
