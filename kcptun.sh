@@ -2151,7 +2151,7 @@ uninstall_kcptun() {
 			update-rc.d -f supervisord remove
 		fi
 
-		rm -f "$(easy_install -mxN supervisor | grep 'Using.*supervisor.*\.egg' | awk '{print $2}')"
+		rm -rf "$(easy_install -mxN supervisor | grep 'Using.*supervisor.*\.egg' | awk '{print $2}')"
 
 		rm -f /usr/local/bin/echo_supervisord_conf
 		rm -f /usr/local/bin/pidproxy
