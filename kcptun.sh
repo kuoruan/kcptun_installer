@@ -364,9 +364,9 @@ check_port() {
 	local port=$1
 
 	if command_exists netstat; then
-		return $(netstat -ntul | grep -qE "[0-9:]:${port}\s" >/dev/null 2>&1)
+		return $(netstat -ntul | grep -qE "[0-9:]:${port}\s")
 	elif command_exists ss; then
-		return $(ss -ntul | grep -qE "[0-9:]:${port}\s" >/dev/null 2>&1)
+		return $(ss -ntul | grep -qE "[0-9:]:${port}\s")
 	else
 		return 1
 	fi
@@ -1479,7 +1479,7 @@ config_firewall() {
 			if [ -n "$current_listen_port" ]; then
 				iptables -D INPUT -p udp --dport ${current_listen_port} -j ACCEPT >/dev/null 2>&1
 			fi
-			iptables -nL | grep "$listen_port" | grep -q "ACCEPT" >/dev/null 2>&1
+			iptables -nL | grep "$listen_port" | grep -q "ACCEPT"
 			if [ $? -ne 0 ]; then
 				iptables -I INPUT -p udp --dport ${listen_port} -j ACCEPT
 				service iptables save
@@ -1507,7 +1507,7 @@ config_firewall() {
 	if command_exists firewall-cmd; then
 		if systemctl status firewalld >/dev/null 2>&1; then
 			if [ -n "$current_listen_port" ]; then
-				firewall-cmd --zone=public --remove-port=${listen_port}/udp >/dev/null 2>&1
+				firewall-cmd --zone=public --remove-port=${current_listen_port}/udp >/dev/null 2>&1
 			fi
 			firewall-cmd --zone=public --query-port=${listen_port}/udp >/dev/null 2>&1
 			if [ $? -ne 0 ]; then
