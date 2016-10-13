@@ -21,9 +21,9 @@ export PATH
 
 ## 定义常量
 
-SHELL_VERSION=12
+SHELL_VERSION=13
 CONFIG_VERSION=5
-INIT_VERSION=2
+INIT_VERSION=3
 
 CUR_DIR=`pwd` # 当前目录
 KCPTUN_INSTALL_DIR=/usr/share/kcptun # kcptun 默认安装目录
@@ -48,7 +48,7 @@ declare -Ar DEFAULT=(
 	[PARITYSHARD]=3
 	[DSCP]=0
 	[NOCOMP]=false
-	[NODELAY]=1
+	[NODELAY]=0
 	[INTERVAL]=20
 	[RESEND]=2
 	[NC]=1
@@ -364,9 +364,9 @@ check_port() {
 	local port=$1
 
 	if command_exists netstat; then
-		return $(netstat -ntul | grep -qE "[0-9:]:${port} ")
+		return $(netstat -ntul | grep -qE "[0-9:]:${port} " >/dev/null 2>&1)
 	elif command_exists ss; then
-		return $(ss -ntul | grep -qE "[0-9:]:${port} ")
+		return $(ss -ntul | grep -qE "[0-9:]:${port} " >/dev/null 2>&1)
 	else
 		return 1
 	fi
@@ -391,7 +391,8 @@ set_listen_port() {
 			fi
 		fi
 
-		if check_port $listen_port && [ "$listen_port" != "$(get_current_listen_port)" ]; then
+		current_listen_port=$(get_current_listen_port)
+		if check_port $listen_port && [ "$listen_port" != "$current_listen_port" ]; then
 			echo "端口已被占用, 请重新输入!"
 			continue
 		fi
@@ -1474,24 +1475,26 @@ config_firewall() {
 	EOF
 
 	if command_exists iptables; then
-		if service iptables status &>/dev/null; then
-			iptables -L -n | grep "$target_port" | grep "ACCEPT" &>/dev/null
+		if service iptables status >/dev/null 2>&1; then
+			if [ -n "$current_listen_port" ]; then
+				iptables -D INPUT -p udp --dport ${current_listen_port} -j ACCEPT >/dev/null 2>&1
+			fi
+			iptables -nL | grep "$listen_port" | grep -q "ACCEPT" >/dev/null 2>&1
 			if [ $? -ne 0 ]; then
-				iptables -I INPUT -m state --state NEW -m tcp -p tcp --dport ${target_port} -j ACCEPT
-				iptables -I INPUT -m state --state NEW -m udp -p udp --dport ${target_port} -j ACCEPT
+				iptables -I INPUT -p udp --dport ${listen_port} -j ACCEPT
 				service iptables save
 				service iptables restart
-			else
-				cat >&2 <<-EOF
-
-				端口 ${target_port} 已设置!
-				EOF
 			fi
+
+			cat >&2 <<-EOF
+
+			UDP 端口 ${listen_port} 已开放!
+			EOF
 		else
 			cat >&2 <<-EOF
 
 			iptables 未启动或未配置
-			如有必要, 请手动添加端口 ${target_port} 的防火墙规则!
+			如有必要, 请手动添加端口 ${listen_port} 的防火墙规则!
 			EOF
 		fi
 	else
@@ -1502,15 +1505,24 @@ config_firewall() {
 	fi
 
 	if command_exists firewall-cmd; then
-		if systemctl status firewalld &>/dev/null; then
-			firewall-cmd --permanent --zone=public --add-port=${target_port}/tcp
-			firewall-cmd --permanent --zone=public --add-port=${target_port}/udp
-			firewall-cmd --reload
+		if systemctl status firewalld >/dev/null 2>&1; then
+			if [ -n "$current_listen_port" ]; then
+				firewall-cmd --zone=public --remove-port=${listen_port}/udp >/dev/null 2>&1
+			fi
+			firewall-cmd --zone=public --query-port=${listen_port}/udp >/dev/null 2>&1
+			if [ $? -ne 0 ]; then
+				firewall-cmd --permanent --zone=public --add-port=${listen_port}/udp
+				firewall-cmd --reload
+			fi
+			cat >&2 <<-EOF
+
+			UDP 端口 ${listen_port} 已开放!
+			EOF
 		else
 			cat >&2 <<-EOF
 
 			firewalld 未启动或未配置
-			如果有必要, 请手动添加端口 ${target_port} 的防火墙规则!
+			如果有必要, 请手动添加端口 ${listen_port} 的防火墙规则!
 			EOF
 		fi
 	else
@@ -2109,7 +2121,7 @@ uninstall_kcptun() {
 	按任意键继续...或者 Ctrl+C 取消
 	EOF
 	any_key_to_continue
-	echo "正在卸载 Kcptun 服务端并取消 Supervisor 的开机启动..."
+	echo "正在卸载 Kcptun 服务端并停止 Supervisor..."
 	service supervisord stop
 
 	rm -f "/etc/supervisor/conf.d/kcptun*.conf"
@@ -2144,7 +2156,7 @@ uninstall_kcptun() {
 		fi
 
 		if command_exists pip; then
-			pip uninstall supervisor
+			pip uninstall supervisor -y
 		else
 			rm -f "$(easy_install -mxN supervisor | grep 'Using.*supervisor.*\.egg' | awk '{print $2}')"
 		fi

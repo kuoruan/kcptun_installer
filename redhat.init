@@ -32,7 +32,7 @@ OPTIONS="-c /etc/supervisor/supervisord.conf"
 STOP_TIMEOUT=10
 RETVAL=0
 
-test -x $SUPERVISORD || exit 0
+test -x $SUPERVISORD || exit 1
 
 do_start() {
     if status -p $PIDFILE $SUPERVISORD >&/dev/null; then

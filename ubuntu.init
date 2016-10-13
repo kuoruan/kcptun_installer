@@ -27,7 +27,7 @@ RETVAL=0
 SCRIPT_OK=0
 SCRIPT_ERROR=1
 
-test -x $SUPERVISORD || exit 0
+test -x $SUPERVISORD || exit 1
 
 running_pid() {
     # Check if a given process pid's cmdline matches a given name
