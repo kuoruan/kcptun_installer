@@ -21,15 +21,18 @@
 # Source function library
 . /etc/rc.d/init.d/functions
 
-# Path to the supervisorctl script, server binary,
-# and short-form for messages.
-SUPERVISORCTL=/usr/bin/supervisorctl
-SUPERVISORD=/usr/bin/supervisord
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+PREFIX=/usr/local
+SUPERVISORD=$PREFIX/bin/supervisord
+SUPERVISORCTL=$PREFIX/bin/supervisorctl
 NAME=supervisord
 PIDFILE=/var/run/supervisord.pid
 OPTIONS="-c /etc/supervisor/supervisord.conf"
 STOP_TIMEOUT=10
 RETVAL=0
+
+test -x $SUPERVISORD || exit 0
 
 do_start() {
     if status -p $PIDFILE $SUPERVISORD >&/dev/null; then
