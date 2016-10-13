@@ -21,7 +21,7 @@ export PATH
 
 ## 定义常量
 
-SHELL_VERSION=13
+SHELL_VERSION=14
 CONFIG_VERSION=5
 INIT_VERSION=3
 
@@ -2099,7 +2099,7 @@ check_update() {
 	正在更新 Supervisor...
 	EOF
 
-	easy_install -U supervisor
+	easy_install -U supervisor >/dev/null 2>&1
 
 	cat >&2 <<-'EOF'
 

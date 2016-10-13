@@ -1,7 +1,7 @@
 {
-	"shell_version": 13,
+	"shell_version": 14,
 	"shell_url": "https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.sh",
-	"change_log": "1.修复防火墙端口添加错误的问题;\n2.现在重新配置时会删除以前的防火墙端口规则;\n3.修改 nodelay 的默认参数;\n4.修复一些显示问题;\n5.检查更新时同时更新 Supervisor;\n6.卸载时可选择同时卸载 Supervisor",
+	"change_log": "1.修复防火墙端口添加错误的问题;\n2.现在重新配置时会删除以前的防火墙端口规则;\n3.修改 nodelay 的默认参数;\n4.修复一些显示问题;\n5.检查更新时同时更新 Supervisor;\n6.卸载时可选择同时卸载 Supervisor\n7.紧急修复v13上的一些问题, 如果你使用v13安装失败, 请先执行 ./kcptun.sh uninstall;pip uninstall -y supervisor, 之后重装",
 	"config_version": 5,
 	"config_change_log": "1.添加-log参数;\n2.配置文件现在包含所有参数;\n3.调整日志文件目录到/var/log/kcptun",
 	"init_version": 3,
