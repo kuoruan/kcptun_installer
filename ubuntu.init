@@ -13,14 +13,11 @@
 
 . /lib/lsb/init-functions
 
-# Include supervisor defaults if available
-if [ -f /etc/default/supervisor ] ; then
-    . /etc/default/supervisor
-fi
-
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-SUPERVISORD=/usr/local/bin/supervisord
-SUPERVISORCTL=/usr/local/bin/supervisorctl
+
+PREFIX=/usr/local
+SUPERVISORD=$PREFIX/bin/supervisord
+SUPERVISORCTL=$PREFIX/bin/supervisorctl
 NAME=supervisord
 PIDFILE=/var/run/supervisord.pid
 OPTIONS="-c /etc/supervisor/supervisord.conf"
@@ -30,7 +27,7 @@ RETVAL=0
 SCRIPT_OK=0
 SCRIPT_ERROR=1
 
-test -x $SUPERVISORD || exit 0
+test -x $SUPERVISORD || exit 1
 
 running_pid() {
     # Check if a given process pid's cmdline matches a given name
@@ -42,7 +39,7 @@ running_pid() {
     return 0
 }
 
-running() {
+is_running() {
     # Check if the process is running looking at /proc
     # (works for all users)
 
@@ -57,15 +54,15 @@ running() {
 do_start() {
     log_daemon_msg "Starting $NAME: "
 
-    if running ; then
+    if is_running; then
         log_end_msg $SCRIPT_ERROR
         echo "$NAME is already running."
         RETVAL=0
     else
         start-stop-daemon --start --quiet --pidfile $PIDFILE \
             --startas $SUPERVISORD -- $OPTIONS -j $PIDFILE
-        test -f $PIDFILE || sleep 1
-        if running ; then
+        [ -f $PIDFILE ] || sleep 1
+        if is_running; then
             log_end_msg $SCRIPT_OK
             $SUPERVISORCTL $OPTIONS status
             RETVAL=0
@@ -78,7 +75,7 @@ do_start() {
 
 do_stop() {
     log_daemon_msg "Stopping $NAME: "
-    if running ; then
+    if is_running; then
         start-stop-daemon --stop --retry TERM/$STOP_TIMEOUT/KILL/5 --quiet --oknodo --pidfile $PIDFILE
         log_end_msg $SCRIPT_OK
         RETVAL=0
@@ -91,7 +88,7 @@ do_stop() {
 
 chk_status() {
     echo -n "$NAME is "
-    if running ;  then
+    if is_running;  then
         echo "running."
         $SUPERVISORCTL $OPTIONS status
         RETVAL=0
@@ -116,7 +113,7 @@ case "$1" in
         chk_status
         ;;
     *)
-        echo "Usage: /etc/init.d/$NAME {start|stop|restart|status}" >&2
+        echo "Usage: /etc/init.d/$NAME {start|stop|restart|status}"
         RETVAL=2
         ;;
 esac

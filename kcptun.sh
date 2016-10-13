@@ -21,9 +21,9 @@ export PATH
 
 ## 定义常量
 
-SHELL_VERSION=12
+SHELL_VERSION=13
 CONFIG_VERSION=5
-INIT_VERSION=2
+INIT_VERSION=3
 
 CUR_DIR=`pwd` # 当前目录
 KCPTUN_INSTALL_DIR=/usr/share/kcptun # kcptun 默认安装目录
@@ -48,7 +48,7 @@ declare -Ar DEFAULT=(
 	[PARITYSHARD]=3
 	[DSCP]=0
 	[NOCOMP]=false
-	[NODELAY]=1
+	[NODELAY]=0
 	[INTERVAL]=20
 	[RESEND]=2
 	[NC]=1
@@ -364,9 +364,9 @@ check_port() {
 	local port=$1
 
 	if command_exists netstat; then
-		return $(netstat -ntul | grep -qE "[0-9:]:${port} ")
+		return $(netstat -ntul | grep -qE "[0-9:]:${port} " >/dev/null 2>&1)
 	elif command_exists ss; then
-		return $(ss -ntul | grep -qE "[0-9:]:${port} ")
+		return $(ss -ntul | grep -qE "[0-9:]:${port} " >/dev/null 2>&1)
 	else
 		return 1
 	fi
@@ -391,7 +391,8 @@ set_listen_port() {
 			fi
 		fi
 
-		if check_port $listen_port && [ "$listen_port" != "$(get_current_listen_port)" ]; then
+		current_listen_port=$(get_current_listen_port)
+		if check_port $listen_port && [ "$listen_port" != "$current_listen_port" ]; then
 			echo "端口已被占用, 请重新输入!"
 			continue
 		fi
@@ -1167,17 +1168,19 @@ install_dependence() {
 		yum makecache
 		yum --disablerepo=epel update -y ca-certificates || yum update -y ca-certificates
 		yum install -y epel-release
-		yum --enablerepo=epel install -y curl wget jq python-setuptools tar
+		yum --enablerepo=epel install -y curl wget jq python-pip tar
 	else
 		apt-get -y update
-		apt-get -y install curl wget jq python-setuptools tar || {
-			[ "$OS" = "Ubuntu" ] && {
+		apt-get -y install curl wget jq python-pip tar || {
+
+			if [ "$OS" = "Ubuntu" ]; then
 				echo "deb http://archive.ubuntu.com/ubuntu vivid main universe" >> /etc/apt/sources.list
-			} || {
+			else
 				echo "deb http://ftp.debian.org/debian wheezy-backports main contrib non-free" >> /etc/apt/sources.list
-			}
+			fi
+
 			apt-get -y update
-			apt-get -y install curl wget jq python-setuptools tar || {
+			apt-get -y install curl wget jq python-pip tar || {
 				cat >&2 <<-'EOF'
 
 				安装依赖软件包失败!
@@ -1187,33 +1190,25 @@ install_dependence() {
 		}
 	fi
 
-	easy_install supervisor || {
+	if ! pip install --upgrade supervisor; then
 		cat >&2 <<-'EOF'
 
 		安装 Supervisor 失败!
 		EOF
 		exit_with_error
-	}
+	fi
 
-	[ -d /etc/supervisor/conf.d ] || {
-		mkdir -p /etc/supervisor/conf.d || {
-			cat >&2 <<-'EOF'
+	[ -d /etc/supervisor/conf.d ] || mkdir -p /etc/supervisor/conf.d
 
-			创建 Supervisor 配置文件目录失败!
-			EOF
-			exit_with_error
-		}
-	}
-
-	[ -s /etc/supervisor/supervisord.conf ] || {
-		echo_supervisord_conf > /etc/supervisor/supervisord.conf || {
+	if [ ! -s /etc/supervisor/supervisord.conf ]; then
+		if ! echo_supervisord_conf > /etc/supervisor/supervisord.conf; then
 			cat >&2 <<-'EOF'
 
 			创建 Supervisor 配置文件失败!
 			EOF
 			exit_with_error
-		}
-	}
+		fi
+	fi
 }
 
 # 通过网络获取需要的信息
@@ -1338,13 +1333,13 @@ unpack_file() {
 
 	local kcptun_server_exec="$KCPTUN_INSTALL_DIR"/server_"$FILE_SUFFIX"
 	if [ -f "$kcptun_server_exec" ]; then
-		chmod a+x "$kcptun_server_exec" || {
+		if ! chmod a+x "$kcptun_server_exec"; then
 			cat >&2 <<-'EOF'
 
 			无法设置执行权限...
 			EOF
 			exit_with_error
-		}
+		fi
 	else
 		cat >&2 <<-'EOF'
 
@@ -1377,7 +1372,9 @@ config_kcptun() {
 		[ -d "$KCPTUN_INSTALL_DIR" ] || mkdir -p "$KCPTUN_INSTALL_DIR"
 		[ -d "$KCPTUN_LOG_DIR" ] || mkdir -p "$KCPTUN_LOG_DIR"
 
-		cat > "$KCPTUN_INSTALL_DIR"/server-config"$current_count".json<<-EOF
+		local config_file="$(get_current_config_file)"
+
+		cat > "$config_file"<<-EOF
 		{
 		    "listen": "${listen_addr}:${listen_port}",
 		    "target": "${target_ip}:${target_port}",
@@ -1402,10 +1399,10 @@ config_kcptun() {
 		}
 		EOF
 
-		cat > /etc/supervisor/conf.d/kcptun"$current_count".conf<<-EOF
+		cat > "/etc/supervisor/conf.d/kcptun"$current_count".conf"<<-EOF
 		[program:kcptun${current_count}]
 		directory=${KCPTUN_INSTALL_DIR}
-		command=${KCPTUN_INSTALL_DIR}/server_${FILE_SUFFIX} -c "$(get_current_config_file)"
+		command=${KCPTUN_INSTALL_DIR}/server_${FILE_SUFFIX} -c "${config_file}"
 		process_name=%(program_name)s
 		autostart=true
 		redirect_stderr=true
@@ -1444,15 +1441,13 @@ downlod_init_script() {
 		exit_with_error
 	fi
 
-	chmod a+x /etc/init.d/supervisord
-
-	[ -x /etc/init.d/supervisord ] || {
+	if ! chmod a+x /etc/init.d/supervisord; then
 		cat >&2 <<-'EOF'
 
 		设置执行权限失败...
 		EOF
 		exit_with_error
-	}
+	fi
 }
 
 # 安装服务
@@ -1480,24 +1475,26 @@ config_firewall() {
 	EOF
 
 	if command_exists iptables; then
-		if service iptables status &>/dev/null; then
-			iptables -L -n | grep "$target_port" | grep "ACCEPT" &>/dev/null
+		if service iptables status >/dev/null 2>&1; then
+			if [ -n "$current_listen_port" ]; then
+				iptables -D INPUT -p udp --dport ${current_listen_port} -j ACCEPT >/dev/null 2>&1
+			fi
+			iptables -nL | grep "$listen_port" | grep -q "ACCEPT" >/dev/null 2>&1
 			if [ $? -ne 0 ]; then
-				iptables -I INPUT -m state --state NEW -m tcp -p tcp --dport ${target_port} -j ACCEPT
-				iptables -I INPUT -m state --state NEW -m udp -p udp --dport ${target_port} -j ACCEPT
+				iptables -I INPUT -p udp --dport ${listen_port} -j ACCEPT
 				service iptables save
 				service iptables restart
-			else
-				cat >&2 <<-EOF
-
-				端口 ${target_port} 已设置!
-				EOF
 			fi
+
+			cat >&2 <<-EOF
+
+			UDP 端口 ${listen_port} 已开放!
+			EOF
 		else
 			cat >&2 <<-EOF
 
 			iptables 未启动或未配置
-			如有必要, 请手动添加端口 ${target_port} 的防火墙规则!
+			如有必要, 请手动添加端口 ${listen_port} 的防火墙规则!
 			EOF
 		fi
 	else
@@ -1508,15 +1505,24 @@ config_firewall() {
 	fi
 
 	if command_exists firewall-cmd; then
-		if systemctl status firewalld &>/dev/null; then
-			firewall-cmd --permanent --zone=public --add-port=${target_port}/tcp
-			firewall-cmd --permanent --zone=public --add-port=${target_port}/udp
-			firewall-cmd --reload
+		if systemctl status firewalld >/dev/null 2>&1; then
+			if [ -n "$current_listen_port" ]; then
+				firewall-cmd --zone=public --remove-port=${listen_port}/udp >/dev/null 2>&1
+			fi
+			firewall-cmd --zone=public --query-port=${listen_port}/udp >/dev/null 2>&1
+			if [ $? -ne 0 ]; then
+				firewall-cmd --permanent --zone=public --add-port=${listen_port}/udp
+				firewall-cmd --reload
+			fi
+			cat >&2 <<-EOF
+
+			UDP 端口 ${listen_port} 已开放!
+			EOF
 		else
 			cat >&2 <<-EOF
 
 			firewalld 未启动或未配置
-			如果有必要, 请手动添加端口 ${target_port} 的防火墙规则!
+			如果有必要, 请手动添加端口 ${listen_port} 的防火墙规则!
 			EOF
 		fi
 	else
@@ -1736,18 +1742,18 @@ manual_install() {
 			echo
 			if $(grep -qE "\w+" <<< "$tag_name"); then
 
-				[ "$tag_name" = "SNMP_Milestone" ] && {
+				if [ "$tag_name" = "SNMP_Milestone" ]; then
 					echo "不支持此版本, 请重新输入!"
 					unset tag_name
 					continue
-				}
+				fi
 
 				local version_num
 				version_num=$(grep -oE "[0-9]+" <<< "$tag_name") || version_num=0
-				[ ${#version_num} -eq 8 -a $version_num -le 20160826 ] && {
+				if [ ${#version_num} -eq 8 -a $version_num -le 20160826 ]; then
 					echo "暂不支持安装 v20160826 及以前版本"
 					continue
-				}
+				fi
 			else
 				echo "输入无效, 请重新输入!"
 				continue
@@ -1851,10 +1857,10 @@ load_instance_config() {
 	done <<< "$lines"
 
 	[ -n "$listen" ] && listen_port=$(cut -d ':' -f2 <<< "$listen")
-	[ -n "$target" ] && {
+	if [ -n "$target" ]; then
 		target_ip=$(cut -d ':' -f1 <<< "$target")
 		target_port=$(cut -d ':' -f2 <<< "$target")
-	}
+	fi
 }
 
 # 显示配置信息
@@ -1968,9 +1974,10 @@ get_installed_version() {
 check_update() {
 	permission_check
 	linux_check
+	get_arch
 	cat >&2 <<-EOF
 
-	开始检查更新...
+	你选择了检查更新, 正在开始操作...
 	EOF
 
 	local shell_path=$0
@@ -2016,7 +2023,6 @@ check_update() {
 		EOF
 	fi
 
-	get_arch
 	get_installed_version
 	get_kcptun_version_info
 
@@ -2087,6 +2093,22 @@ check_update() {
 		未发现服务启动脚本更新...
 		EOF
 	fi
+
+	cat >&2 <<-'EOF'
+
+	正在更新 Supervisor...
+	EOF
+
+	if command_exists pip; then
+		pip install --upgrade supervisor
+	else
+		easy_install -U supervisor
+	fi
+
+	cat >&2 <<-'EOF'
+
+	更新操作已完成!
+	EOF
 }
 
 # 卸载 Kcptun
@@ -2095,18 +2117,59 @@ uninstall_kcptun() {
 	linux_check
 	cat >&2 <<-'EOF'
 
-	是否卸载 Kcptun 服务端? 按任意键继续...或者 Ctrl+C 取消
+	你选择了卸载 Kcptun 服务端
+	按任意键继续...或者 Ctrl+C 取消
 	EOF
 	any_key_to_continue
-	echo "正在卸载 Kcptun 服务端并取消 Supervisor 的开机启动..."
-	supervisorctl stop kcptun
+	echo "正在卸载 Kcptun 服务端并停止 Supervisor..."
 	service supervisord stop
-
-	[ "$OS" = "CentOS" ] && chkconfig supervisord off || update-rc.d -f supervisord remove
 
 	rm -f "/etc/supervisor/conf.d/kcptun*.conf"
 	rm -rf "$KCPTUN_INSTALL_DIR"
 	rm -rf "$KCPTUN_LOG_DIR"
+
+	cat >&2 <<-'EOF'
+
+	是否同时卸载 Supervisor ?
+	注意: Supervisor 的配置文件将同时被删除
+	EOF
+	while :
+	do
+		read -p "请选择 [y/n]: " yn
+		[ -z "$yn" ] && yn="n"
+		case ${yn:0:1} in
+			y|Y)
+				;;
+			n|N)
+				break
+				;;
+			*)
+				echo "输入有误, 请重新输入!"
+				continue
+				;;
+		esac
+
+		if [ "$OS" = "CentOS" ]; then
+			chkconfig supervisord off
+		else
+			update-rc.d -f supervisord remove
+		fi
+
+		if command_exists pip; then
+			pip uninstall supervisor -y
+		else
+			rm -f "$(easy_install -mxN supervisor | grep 'Using.*supervisor.*\.egg' | awk '{print $2}')"
+		fi
+
+		rm -f /usr/local/bin/echo_supervisord_conf
+		rm -f /usr/local/bin/pidproxy
+		rm -f /usr/local/bin/supervisorctl
+		rm -f /usr/local/bin/supervisord
+		rm -rf /etc/supervisor/
+		rm -rf /etc/init.d/supervisord
+		break
+	done
+
 	cat >&2 <<-'EOF'
 
 	Kcptun 服务端卸载完成, 欢迎再次使用。

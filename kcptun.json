@@ -1,9 +1,9 @@
 {
-	"shell_version": 12,
+	"shell_version": 13,
 	"shell_url": "https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.sh",
-	"change_log": "1.添加多实例功能;\n2.查看参数时可以显示详细信息;\n3.添加使用说明 ./kcptun.sh help;\n4.重新配置时可以设置为当前正在使用的端口;\n5.添加 log 参数, 以便快速查看日志, 请使用 ./kcptun.sh log <id>;\n6.支持直接修改配置文件;\n7.重新配置或查看配置时显示推荐参数",
+	"change_log": "1.修复防火墙端口添加错误的问题;\n2.现在重新配置时会删除以前的防火墙端口规则;3.修改 nodelay 的默认参数;\n4.使用 pip 管理软件包, 卸载时可选择卸载 Supervisor;\n5.修复一些显示问题;\n6.检查更新时同时更新 Supervisor",
 	"config_version": 5,
 	"config_change_log": "1.添加-log参数;\n2.配置文件现在包含所有参数;\n3.调整日志文件目录到/var/log/kcptun",
-	"init_version": 2,
-	"init_change_log": "1.重写Ubuntu和Debian的启动脚本;\n2.顺带重写了CentOS的启动脚本;\n3.如果出现无法启动或者关闭的情况, 请反馈给我"
+	"init_version": 3,
+	"init_change_log": "1.修复 CentOS 上找不到 Supervisor 执行文件的问题;\n2.由于 Supervisor 的版本不同, 执行文件的目录可能不一样, 如果你出现无法安装或启动失败的问题, 请及时联系我"
 }
