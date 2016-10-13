@@ -2077,7 +2077,7 @@ check_update() {
 
 		按任意键开始更新, 或者 Ctrl+C 取消
 		EOF
-		click_to_continue
+		any_key_to_continue
 		echo "正在自动更新启动脚本..."
 		downlod_init_script
 		[ "$OS" = "CentOS" -a $OS_VSRSION -eq 7 ] && systemctl daemon-reload
