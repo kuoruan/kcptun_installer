@@ -1168,10 +1168,10 @@ install_dependence() {
 		yum makecache
 		yum --disablerepo=epel update -y ca-certificates || yum update -y ca-certificates
 		yum install -y epel-release
-		yum --enablerepo=epel install -y curl wget jq python-pip tar
+		yum --enablerepo=epel install -y curl wget jq python-setuptools tar
 	else
 		apt-get -y update
-		apt-get -y install curl wget jq python-pip tar || {
+		apt-get -y install curl wget jq python-setuptools tar || {
 
 			if [ "$OS" = "Ubuntu" ]; then
 				echo "deb http://archive.ubuntu.com/ubuntu vivid main universe" >> /etc/apt/sources.list
@@ -1180,7 +1180,7 @@ install_dependence() {
 			fi
 
 			apt-get -y update
-			apt-get -y install curl wget jq python-pip tar || {
+			apt-get -y install curl wget jq python-setuptools tar || {
 				cat >&2 <<-'EOF'
 
 				安装依赖软件包失败!
@@ -1190,7 +1190,7 @@ install_dependence() {
 		}
 	fi
 
-	if ! pip install supervisor; then
+	if ! easy_install install supervisor; then
 		cat >&2 <<-'EOF'
 
 		安装 Supervisor 失败!
@@ -2099,11 +2099,7 @@ check_update() {
 	正在更新 Supervisor...
 	EOF
 
-	if command_exists pip; then
-		pip install --upgrade supervisor
-	else
-		easy_install -U supervisor
-	fi
+	easy_install -U supervisor
 
 	cat >&2 <<-'EOF'
 
@@ -2155,11 +2151,7 @@ uninstall_kcptun() {
 			update-rc.d -f supervisord remove
 		fi
 
-		if command_exists pip; then
-			pip uninstall supervisor -y
-		else
-			rm -f "$(easy_install -mxN supervisor | grep 'Using.*supervisor.*\.egg' | awk '{print $2}')"
-		fi
+		rm -f "$(easy_install -mxN supervisor | grep 'Using.*supervisor.*\.egg' | awk '{print $2}')"
 
 		rm -f /usr/local/bin/echo_supervisord_conf
 		rm -f /usr/local/bin/pidproxy
