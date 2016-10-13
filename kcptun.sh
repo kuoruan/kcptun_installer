@@ -2131,7 +2131,7 @@ uninstall_kcptun() {
 	EOF
 	while :
 	do
-		read -p "请选择 [y/n]: " yn
+		read -p "(默认: 不卸载) 请选择 [y/n]: " yn
 		[ -z "$yn" ] && yn="n"
 		case ${yn:0:1} in
 			y|Y)
