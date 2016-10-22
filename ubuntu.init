@@ -29,16 +29,6 @@ SCRIPT_ERROR=1
 
 test -x $SUPERVISORD || exit 1
 
-running_pid() {
-    # Check if a given process pid's cmdline matches a given name
-    pid=$1
-    name=$2
-    [ -z "$pid" ] && return 1
-    [ ! -d /proc/$pid ] &&  return 1
-    (cat /proc/$pid/cmdline | tr "\000" "\n"|grep -q $name) || return 1
-    return 0
-}
-
 is_running() {
     # Check if the process is running looking at /proc
     # (works for all users)
@@ -47,7 +37,7 @@ is_running() {
     [ ! -f "$PIDFILE" ] && return 1
     # Obtain the pid and check it against the binary name
     pid=`cat $PIDFILE`
-    running_pid $pid $NAME || return 1
+    (ps aux | grep -v grep | grep $SUPERVISORD | grep -q $pid) || return 1
     return 0
 }
 
