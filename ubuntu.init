@@ -47,7 +47,7 @@ is_running() {
     [ ! -f "$PIDFILE" ] && return 1
     # Obtain the pid and check it against the binary name
     pid=`cat $PIDFILE`
-    running_pid $pid $SUPERVISORD || return 1
+    running_pid $pid $NAME || return 1
     return 0
 }
 
