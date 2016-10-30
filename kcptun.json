@@ -1,9 +1,9 @@
 {
-	"shell_version": 14,
+	"shell_version": 15,
 	"shell_url": "https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.sh",
-	"change_log": "1.修复防火墙端口添加错误的问题;\n2.现在重新配置时会删除以前的防火墙端口规则;\n3.修改 nodelay 的默认参数;\n4.修复一些显示问题;\n5.检查更新时同时更新 Supervisor;\n6.卸载时可选择同时卸载 Supervisor\n7.紧急修复v13上的一些问题, 如果你使用v13安装失败, 请先执行 ./kcptun.sh uninstall;pip uninstall -y supervisor, 之后重装",
+	"change_log": "1.简化 jq 的安装方式, 直接下载二进制文件而不从软件库安装;\n2.使用nobody用户启动kcptun, 提高安全性;\n3.完善脚本使用说明;\n4.由于使用 nobody 用户启动 kcptun, 不好处理日志文件夹的写入权限, 故将 kcptun 中的日志配置项去除, 重新使用 Supervisor 写入日志",
 	"config_version": 5,
-	"config_change_log": "1.添加-log参数;\n2.配置文件现在包含所有参数;\n3.调整日志文件目录到/var/log/kcptun",
+	"config_change_log": "1.配置文件现在包含所有参数;\n2.调整日志文件目录到/var/log/kcptun",
 	"init_version": 3,
 	"init_change_log": "1.修复 CentOS 上找不到 Supervisor 执行文件的问题;\n2.由于 Supervisor 的版本不同, 执行文件的目录可能不一样, 如果你出现无法安装或启动失败的问题, 请及时联系我"
 }
