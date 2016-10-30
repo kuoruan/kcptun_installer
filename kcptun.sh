@@ -31,6 +31,8 @@ KCPTUN_LOG_DIR=/var/log/kcptun # kcptun 日志目录
 KCPTUN_RELEASES_URL="https://api.github.com/repos/xtaci/kcptun/releases"
 KCPTUN_TAGS_URL="https://github.com/xtaci/kcptun/tags"
 SHELL_VERSION_INFO_URL="https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.json"
+JQ_LINUX32="https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux32"
+JQ_LINUX64="https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64"
 
 ## 参数默认值
 # associative array
@@ -1166,28 +1168,21 @@ install_dependence() {
 
 	if [ "$OS" = "CentOS" ]; then
 		yum makecache
-		yum --disablerepo=epel update -y ca-certificates || yum update -y ca-certificates
-		yum install -y epel-release
-		yum --enablerepo=epel install -y curl wget jq python-setuptools tar
+		yum update -y ca-certificates
+		yum install -y curl wget python-setuptools tar
 	else
 		apt-get -y update
-		apt-get -y install curl wget jq python-setuptools tar || {
+		apt-get -y install curl wget python-setuptools tar || {
+			cat >&2 <<-'EOF'
 
-			if [ "$OS" = "Ubuntu" ]; then
-				echo "deb http://archive.ubuntu.com/ubuntu vivid main universe" >> /etc/apt/sources.list
-			else
-				echo "deb http://ftp.debian.org/debian wheezy-backports main contrib non-free" >> /etc/apt/sources.list
-			fi
-
-			apt-get -y update
-			apt-get -y install curl wget jq python-setuptools tar || {
-				cat >&2 <<-'EOF'
-
-				安装依赖软件包失败!
-				EOF
-				exit_with_error
-			}
+			安装依赖软件包失败!
+			EOF
+			exit_with_error
 		}
+	fi
+
+	if ! command_exists jq;  then
+		install_jq
 	fi
 
 	if ! easy_install supervisor; then
@@ -1201,13 +1196,52 @@ install_dependence() {
 	[ -d /etc/supervisor/conf.d ] || mkdir -p /etc/supervisor/conf.d
 
 	if [ ! -s /etc/supervisor/supervisord.conf ]; then
-		if ! echo_supervisord_conf > /etc/supervisor/supervisord.conf; then
+
+		if ! command_exists echo_supervisord_conf; then
 			cat >&2 <<-'EOF'
 
-			创建 Supervisor 配置文件失败!
-			EOF
-			exit_with_error
+				未找到 echo_supervisord_conf, 无法自动创建 Supervisor 配置文件!
+				可能是当前安装的 supervisor 版本过低
+				EOF
+				exit_with_error
+		else
+			if ! echo_supervisord_conf > /etc/supervisor/supervisord.conf; then
+				cat >&2 <<-'EOF'
+
+				创建 Supervisor 配置文件失败!
+				EOF
+				exit_with_error
+			fi
 		fi
+	fi
+}
+
+# 安装 Json 解析工具 JQ
+install_jq() {
+	cat >&2 <<-'EOF'
+
+	正在安装 Json 解析工具 jq ...
+	EOF
+	local jq_url
+	if [ "$ARCH" = '64' ]; then
+		jq_url="$JQ_LINUX64"
+	else
+		jq_url="$JQ_LINUX32"
+	fi
+
+	if wget --no-check-certificate -O /usr/bin/jq "$jq_url"; then
+		chmod +x /usr/bin/jq
+	else
+		cat >&2 <<-EOF
+
+		自动安装 jq 失败, 请手动下载安装!
+
+		    wget --no-check-certificate -O /usr/bin/jq ${jq_url}
+		    chmod +x /usr/bin/jq
+
+		安装完成之后请重新运行脚本
+		EOF
+		exit_with_error
 	fi
 }
 
@@ -1219,11 +1253,7 @@ get_kcptun_version_info() {
 	EOF
 
 	if ! command_exists jq; then
-		cat >&2 <<-'EOF'
-
-		jq 命令未安装, 脚本无法正常运行, 请手动安装之后重试.
-		EOF
-		exit_with_error
+		install_jq
 	fi
 
 	local request_version=$1
