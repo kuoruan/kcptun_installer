@@ -2232,9 +2232,9 @@ reconfig_kcptun() {
 	get_server_ip
 	get_arch
 
-	cat >&2 <<-'EOF'
+	cat >&2 <<-EOF
 
-	你选择了重新配置实例, 正在开始操作...
+	你选择了重新配置实例${1}, 正在开始操作...
 	EOF
 
 	if [ -n "$1" ]; then
@@ -2324,7 +2324,7 @@ usage() {
 
 	请使用: $0 <option>
 
-	可使用的参数包括 (尖括号为可选):
+	可使用的参数 <option> 包括:
 
 	    install          安装
 	    uninstall        卸载
@@ -2332,9 +2332,13 @@ usage() {
 	    manual           自定义 Kcptun 版本安装
 	    help             查看脚本使用说明
 	    add              添加一个实例, 多用户使用
-	    reconfig <id>    重新配置实例, <id> 为实例序号
-	    show <id>        显示实例详细配置, <id> 为实例序号
-	    log <id>         显示实例日志, <id> 为实例序号
+	    reconfig <id>    重新配置实例
+	    show <id>        显示实例详细配置
+	    log <id>         显示实例日志
+
+	注: 上述参数中的 <id> 可选, 代表的是实例的序号
+	    可使用 1, 2, 3 ... 分别对应 kcptun, kcptun2, kcptun3 ...
+	    若不指定 <id>, 则默认为 1
 
 	Supervisor 命令:
 	    service supervisord {start|stop|restart|status}
