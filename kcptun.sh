@@ -1400,7 +1400,6 @@ config_kcptun() {
 
 		# 创建文件夹
 		[ -d "$KCPTUN_INSTALL_DIR" ] || mkdir -p "$KCPTUN_INSTALL_DIR"
-		[ -d "$KCPTUN_LOG_DIR" ] || mkdir -p "$KCPTUN_LOG_DIR"
 
 		local config_file="$(get_current_config_file)"
 
@@ -1424,13 +1423,13 @@ config_kcptun() {
 		    "resend": ${resend},
 		    "nc": ${nc},
 		    "sockbuf": ${sockbuf},
-		    "keepalive": ${keepalive},
-		    "log": "$(get_current_log_file)"
+		    "keepalive": ${keepalive}
 		}
 		EOF
 
 		cat > "/etc/supervisor/conf.d/kcptun"$current_count".conf"<<-EOF
 		[program:kcptun${current_count}]
+		user=nobody
 		directory=${KCPTUN_INSTALL_DIR}
 		command=${KCPTUN_INSTALL_DIR}/server_${FILE_SUFFIX} -c "${config_file}"
 		process_name=%(program_name)s
@@ -1736,9 +1735,6 @@ install_kcptun() {
 update_kcptun() {
 	download_file
 	unpack_file
-
-	[ -d "$KCPTUN_LOG_DIR" ] && rm -f "$KCPTUN_LOG_DIR"/* || mkdir -p "$KCPTUN_LOG_DIR"
-
 	restart_supervisor
 	install_cleanup
 	show_installed_version
@@ -2150,6 +2146,7 @@ uninstall_kcptun() {
 	echo "正在卸载 Kcptun 服务端并停止 Supervisor..."
 	service supervisord stop
 
+	rm -f /usr/bin/jq
 	rm -f "/etc/supervisor/conf.d/kcptun*.conf"
 	rm -rf "$KCPTUN_INSTALL_DIR"
 	rm -rf "$KCPTUN_LOG_DIR"
@@ -2201,6 +2198,12 @@ uninstall_kcptun() {
 # 重启 Supervisor
 restart_supervisor() {
 	if [ -x /etc/init.d/supervisord ]; then
+
+		if [ -d "$KCPTUN_LOG_DIR" ]; then
+			rm -f "$KCPTUN_LOG_DIR"/*
+		else
+			mkdir -p "$KCPTUN_LOG_DIR"
+		fi
 
 		if ! service supervisord restart; then
 			cat >&2 <<-'EOF'
@@ -2303,10 +2306,6 @@ reconfig_kcptun() {
 		break
 	done
 
-	[ -d "$KCPTUN_LOG_DIR" ] || mkdir -p "$KCPTUN_LOG_DIR"
-
-	local log_file="$(get_current_log_file)"
-	touch "$log_file" && echo > "$log_file"
 	restart_supervisor
 
 	cat >&2 <<-'EOF'
