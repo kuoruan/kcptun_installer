@@ -1401,6 +1401,14 @@ config_kcptun() {
 		# 创建文件夹
 		[ -d "$KCPTUN_INSTALL_DIR" ] || mkdir -p "$KCPTUN_INSTALL_DIR"
 
+		if ! grep -q "^nogroup" /etc/group; then
+			groupadd nogroup
+		fi
+
+		if ! grep -q "^nobody" /etc/passwd; then
+			useradd -s "$(command -v nologin)" -g nogroup nobody
+		fi
+
 		local config_file="$(get_current_config_file)"
 
 		cat > "$config_file"<<-EOF
