@@ -282,10 +282,12 @@ installed_check() {
 		推荐你备份当前 Supervisor 配置后卸载原有版本
 		已安装的 Supervisor 配置文件路径为: /etc/supervisord.conf
 		通过本脚本安装的 Supervisor 配置文件路径为: /etc/supervisor/supervisord.conf
+		你可以使用以下命令来卸载清理原有版本:
 
 		    mv /etc/supervisord.conf /etc/supervisord.conf.bak
+		    $([ "${OS}" = "CentOS" ] && echo -n "yum remove supervisor" || echo -n "apt-get remove --purge supervisor")
 
-		然后你可以尝试通过 $([ "${OS}" = "CentOS" ] && echo -n "yum remove supervisor" || echo -n "apt-get remove supervisor") 来卸载原有版本
+		然后, 请重新运行脚本安装
 		EOF
 
 		exit_with_error
@@ -1182,9 +1184,7 @@ install_dependence() {
 		}
 	fi
 
-	if ! command_exists $JQ;  then
-		install_jq
-	fi
+	[ ! -x "$JQ" ] && install_jq
 
 	if ! easy_install supervisor; then
 		cat >&2 <<-'EOF'
@@ -1264,9 +1264,7 @@ get_kcptun_version_info() {
 	正在获取网络信息...
 	EOF
 
-	if ! command_exists $JQ; then
-		install_jq
-	fi
+	[ ! -x "$JQ" ] && install_jq
 
 	local request_version=$1
 	local kcptun_release_content
@@ -2166,6 +2164,16 @@ uninstall_kcptun() {
 	echo "正在卸载 Kcptun 服务端并停止 Supervisor..."
 	service supervisord stop
 
+	if [ "$OS" = "CentOS" ]; then
+		if yum list installed | grep -q "^jq\."; then
+			yum remove -y jq
+		fi
+	else
+		if dpkg -l | grep -q "\sjq\s"; then
+			apt-get remove --purge -y jq
+		fi
+	fi
+
 	rm -f "$JQ"
 	rm -f "/etc/supervisor/conf.d/kcptun*.conf"
 	rm -rf "$KCPTUN_INSTALL_DIR"
@@ -2209,9 +2217,15 @@ uninstall_kcptun() {
 		break
 	done
 
-	cat >&2 <<-'EOF'
+	cat >&2 <<-EOF
 
 	Kcptun 服务端卸载完成, 欢迎再次使用。
+	注意: 脚本没有自动卸载 python-setuptools (包含 easy_install)
+	如有需要, 你可以使用:
+
+	    $([ "${OS}" = "CentOS" ] && echo -n "yum remove python-setuptools" || echo -n "apt-get remove --purge python-setuptools")
+
+	来手动卸载
 	EOF
 }
 
