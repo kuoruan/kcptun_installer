@@ -33,6 +33,7 @@ KCPTUN_TAGS_URL="https://github.com/xtaci/kcptun/tags"
 SHELL_VERSION_INFO_URL="https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.json"
 JQ_LINUX32="https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux32"
 JQ_LINUX64="https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64"
+JQ=/usr/bin/jq
 
 ## 参数默认值
 # associative array
@@ -149,7 +150,7 @@ get_current_listen_port() {
 	local config_file="$(get_current_config_file)"
 
 	if [ -f "$config_file" ]; then
-		local listen=$(jq -r ".listen" "$config_file")
+		local listen=$($JQ -r ".listen" "$config_file")
 		local current_listen_port=$(cut -d ':' -f2 <<< "$listen")
 
 		if [ -n "$current_listen_port" ] && is_number $current_listen_port; then
@@ -1181,7 +1182,7 @@ install_dependence() {
 		}
 	fi
 
-	if ! command_exists jq;  then
+	if ! command_exists $JQ;  then
 		install_jq
 	fi
 
@@ -1229,15 +1230,15 @@ install_jq() {
 		jq_url="$JQ_LINUX32"
 	fi
 
-	if wget --no-check-certificate -O /usr/bin/jq "$jq_url"; then
-		chmod +x /usr/bin/jq
+	if wget --no-check-certificate -O "$JQ" "$jq_url"; then
+		chmod +x "$JQ"
 	else
 		cat >&2 <<-EOF
 
 		自动安装 jq 失败, 请手动下载安装!
 
-		    wget --no-check-certificate -O /usr/bin/jq ${jq_url}
-		    chmod +x /usr/bin/jq
+		    wget --no-check-certificate -O ${JQ} ${jq_url}
+		    chmod +x ${JQ}
 
 		安装完成之后请重新运行脚本
 		EOF
@@ -1252,7 +1253,7 @@ get_kcptun_version_info() {
 	正在获取网络信息...
 	EOF
 
-	if ! command_exists jq; then
+	if ! command_exists $JQ; then
 		install_jq
 	fi
 
@@ -1260,18 +1261,18 @@ get_kcptun_version_info() {
 	local kcptun_release_content
 
 	if [ -n "$request_version" ]; then
-		kcptun_release_content=$(curl --silent --insecure --fail $KCPTUN_RELEASES_URL | jq -r ".[] | select(.tag_name == \"${request_version}\")")
+		kcptun_release_content=$(curl --silent --insecure --fail $KCPTUN_RELEASES_URL | $JQ -r ".[] | select(.tag_name == \"${request_version}\")")
 	else
-		kcptun_release_content=$(curl --silent --insecure --fail $KCPTUN_RELEASES_URL | jq -r ".[0]")
+		kcptun_release_content=$(curl --silent --insecure --fail $KCPTUN_RELEASES_URL | $JQ -r ".[0]")
 	fi
 
 	if [ -n "$kcptun_release_content" ]; then
-		kcptun_release_name=$(jq -r ".name" <<< "$kcptun_release_content")
-		kcptun_release_tag_name=$(jq -r ".tag_name" <<< "$kcptun_release_content")
-		kcptun_release_prerelease=$(jq -r ".prerelease" <<< "$kcptun_release_content")
-		kcptun_release_html_url=$(jq -r ".html_url" <<< "$kcptun_release_content")
+		kcptun_release_name=$($JQ -r ".name" <<< "$kcptun_release_content")
+		kcptun_release_tag_name=$($JQ -r ".tag_name" <<< "$kcptun_release_content")
+		kcptun_release_prerelease=$($JQ -r ".prerelease" <<< "$kcptun_release_content")
+		kcptun_release_html_url=$($JQ -r ".html_url" <<< "$kcptun_release_content")
 
-		kcptun_release_download_url=$(jq -r ".assets[] | select(.name | contains(\"$SPRUCE_TYPE\")) | .browser_download_url" <<< "$kcptun_release_content" | head -n 1) || {
+		kcptun_release_download_url=$($JQ -r ".assets[] | select(.name | contains(\"$SPRUCE_TYPE\")) | .browser_download_url" <<< "$kcptun_release_content" | head -n 1) || {
 			cat >&2 <<-'EOF'
 
 			获取 Kcptun 下载地址失败, 请重试...
@@ -1295,15 +1296,15 @@ get_kcptun_version_info() {
 get_shell_version_info() {
 	local shell_version_content=$(curl --silent --insecure --fail $SHELL_VERSION_INFO_URL)
 	if [ $? -eq 0 ]; then
-		new_shell_version=$(jq -r ".shell_version" <<< "$shell_version_content" | grep -oE "[0-9]+" )
-		new_config_version=$(jq -r ".config_version" <<< "$shell_version_content" | grep -oE "[0-9]+" )
-		new_init_version=$(jq -r ".init_version" <<< "$shell_version_content" | grep -oE "[0-9]+")
+		new_shell_version=$($JQ -r ".shell_version" <<< "$shell_version_content" | grep -oE "[0-9]+" )
+		new_config_version=$($JQ -r ".config_version" <<< "$shell_version_content" | grep -oE "[0-9]+" )
+		new_init_version=$($JQ -r ".init_version" <<< "$shell_version_content" | grep -oE "[0-9]+")
 
-		shell_change_log=$(jq -r ".change_log" <<< "$shell_version_content")
-		config_change_log=$(jq -r ".config_change_log" <<< "$shell_version_content")
-		init_change_log=$(jq -r ".init_change_log" <<< "$shell_version_content")
+		shell_change_log=$($JQ -r ".change_log" <<< "$shell_version_content")
+		config_change_log=$($JQ -r ".config_change_log" <<< "$shell_version_content")
+		init_change_log=$($JQ -r ".init_change_log" <<< "$shell_version_content")
 
-		new_shell_url=$(jq -r ".shell_url" <<< "$shell_version_content")
+		new_shell_url=$($JQ -r ".shell_url" <<< "$shell_version_content")
 	else
 		new_shell_version=0
 		new_config_version=0
@@ -1866,7 +1867,7 @@ load_instance_config() {
 		exit_with_error
 	fi
 
-	if ! command_exists jq; then
+	if ! command_exists $JQ; then
 		cat >&2 <<-'EOF'
 
 		jq 命令未安装, 脚本无法正常运行, 请手动安装之后重试.
@@ -1874,7 +1875,7 @@ load_instance_config() {
 		exit_with_error
 	fi
 
-	if ! $(jq -r '.' "$config_file" >/dev/null 2>&1); then
+	if ! $($JQ -r '.' "$config_file" >/dev/null 2>&1); then
 		cat >&2 <<-EOF
 
 		实例配置文件存在错误, 请检查!
@@ -1883,7 +1884,7 @@ load_instance_config() {
 		exit_with_error
 	fi
 
-	local lines=$(jq -r 'to_entries | map("\(.key)=\(.value | @sh)") | .[]' "$config_file")
+	local lines=$($JQ -r 'to_entries | map("\(.key)=\(.value | @sh)") | .[]' "$config_file")
 
 	while read -r line
 	do
@@ -2154,7 +2155,7 @@ uninstall_kcptun() {
 	echo "正在卸载 Kcptun 服务端并停止 Supervisor..."
 	service supervisord stop
 
-	rm -f /usr/bin/jq
+	rm -f "$JQ"
 	rm -f "/etc/supervisor/conf.d/kcptun*.conf"
 	rm -rf "$KCPTUN_INSTALL_DIR"
 	rm -rf "$KCPTUN_LOG_DIR"
