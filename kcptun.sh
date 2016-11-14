@@ -1230,17 +1230,28 @@ install_jq() {
 		jq_url="$JQ_LINUX32"
 	fi
 
-	if wget --no-check-certificate -O "$JQ" "$jq_url"; then
-		chmod +x "$JQ"
-	else
+	if ! wget --no-check-certificate -O "$JQ" "$jq_url"; then
 		cat >&2 <<-EOF
 
 		自动安装 jq 失败, 请手动下载安装!
 
 		    wget --no-check-certificate -O ${JQ} ${jq_url}
-		    chmod +x ${JQ}
+		    chmod a+x ${JQ}
 
 		安装完成之后请重新运行脚本
+		EOF
+		exit_with_error
+	fi
+
+	chmod a+x "$JQ"
+	if [ ! -x "$JQ" ]; then
+		cat >&2 <<-EOF
+
+		无法设置执行权限, 请手动设置:
+
+		    chmod a+x ${JQ}
+
+		设置好之后请重新运行脚本
 		EOF
 		exit_with_error
 	fi
