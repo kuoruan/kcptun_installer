@@ -1,7 +1,7 @@
 #!/bin/bash
 
 : <<-'EOF'
-Copyright (C) 2016 Xingwang Liao
+Copyright 2016 Xingwang Liao <kuoruan@gmail.com>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -118,7 +118,7 @@ cat >&2 <<-'EOF'
 # 脚本作者: Index <kuoruan@gmail.com>                   #
 # 作者博客: https://blog.kuoruan.com/                   #
 # Github: https://github.com/kuoruan/kcptun_installer   #
-# QQ交流群: 43391448                                    #
+# QQ交流群: 43391448, 68133628                          #
 #########################################################
 EOF
 
@@ -262,7 +262,7 @@ exit_with_error() {
 
 	Kcptun 服务端安装或配置过程中出现错误!
 	希望你能记录下错误信息, 然后将错误信息发送给我
-	QQ群: 43391448
+	QQ群: 43391448, 68133628
 	邮箱: kuoruan@gmail.com
 	博客: https://blog.kuoruan.com/
 	EOF
@@ -303,7 +303,7 @@ installed_check() {
 	if [ -d /etc/supervisor/conf.d/ ]; then
 		local instance_count=$(get_instance_count)
 
-		if [ $instance_count -gt 0 ] && [ -d /usr/share/kcptun/ ]; then
+		if [ $instance_count -gt 0 ] && [ -d "$KCPTUN_INSTALL_DIR" ]; then
 			cat >&2 <<-EOF
 
 			检测到你已安装 Kcptun 服务端, 已配置的实例个数为 ${instance_count} 个
