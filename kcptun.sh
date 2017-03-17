@@ -45,8 +45,8 @@ declare -Ar DEFAULT=(
 	[CRYPT]="aes"
 	[MODE]="fast"
 	[MTU]=1350
-	[SNDWND]=1024
-	[RCVWND]=1024
+	[SNDWND]=512
+	[RCVWND]=512
 	[DATASHARD]=10
 	[PARITYSHARD]=3
 	[DSCP]=0
@@ -1653,8 +1653,8 @@ show_config_info() {
 	[ "$crypt" != "${DEFAULT[CRYPT]}" ]             && echo -e "crypt: \033[41;37m ${crypt} \033[0m"
 	[ "$mode" != "${DEFAULT[MODE]}" ]               && echo -e "mode: \033[41;37m ${mode} \033[0m"
 	[ "$mtu" != "${DEFAULT[MTU]}" ]                 && echo -e "mtu: \033[41;37m ${mtu} \033[0m"
-	[ "$sndwnd" != "${DEFAULT[SNDWND]}" ]           && echo -e "sndwnd: \033[41;37m ${sndwnd} \033[0m"
-	[ "$rcvwnd" != "${DEFAULT[RCVWND]}" ]           && echo -e "rcvwnd: \033[41;37m ${rcvwnd} \033[0m"
+	echo -e "sndwnd: \033[41;37m ${sndwnd} \033[0m"
+	echo -e "rcvwnd: \033[41;37m ${rcvwnd} \033[0m"
 	[ "$datashard" != "${DEFAULT[DATASHARD]}" ]     && echo -e "datashard: \033[41;37m ${datashard} \033[0m"
 	[ "$parityshard" != "${DEFAULT[PARITYSHARD]}" ] && echo -e "parityshard: \033[41;37m ${parityshard} \033[0m"
 	[ "$dscp" != "${DEFAULT[DSCP]}" ]               && echo -e "dscp: \033[41;37m ${dscp} \033[0m"
