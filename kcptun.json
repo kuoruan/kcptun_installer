@@ -1,9 +1,9 @@
 {
-	"shell_version": 16,
-	"shell_url": "https://raw.githubusercontent.com/kuoruan/kcptun_installer/master/kcptun.sh",
-	"change_log": "1.支持自定义实例启动用户;\n2.支持删除实例;\n3.各种优化;\n4.完善提示信息",
-	"config_version": 5,
-	"config_change_log": "1.配置文件现在包含所有参数;\n2.调整日志文件目录到/var/log/kcptun",
+	"shell_version": 17,
+	"shell_url": "https://github.com/kuoruan/shell-scripts/raw/master/kcptun/kcptun.sh",
+	"change_log": "1.重写脚本，优化逻辑;\n2.将脚本移动到新的 Github 仓库;\n3.支持大部分 Linux 发行版本;\n4.支持 systemd 方式启动",
+	"config_version": 6,
+	"config_change_log": "1.支持 snmp 和 pprof 参数;\n2.输出新版手机端参数",
 	"init_version": 3,
 	"init_change_log": "1.修复 CentOS 上找不到 Supervisor 执行文件的问题;\n2.由于 Supervisor 的版本不同, 执行文件的目录可能不一样, 如果你出现无法安装或启动失败的问题, 请及时联系我"
 }
