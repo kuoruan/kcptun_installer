@@ -121,15 +121,20 @@ do_action() {
 		mv -f "$shell_name" "$back_name"
 	)
 
-	if (wget --no-check-certificate -O "$shell_name" "$NEW_SHELL_URL"); then
-		cat >&2 <<-EOF
-		新脚本下载完成，
-		正在开始运行...
-		EOF
+	if (wget --no-check-certificate -qO "$shell_name" "$NEW_SHELL_URL"); then
 		(
 			set -x
 			rm -f "$back_name"
 			chmod a+x "$shell_name"
+		)
+		cat >&2 <<-EOF
+		新脚本下载完成，
+		三秒后开始执行新脚本...
+		EOF
+
+		(
+			set -x
+			sleep 3
 			bash "$shell_name" "$action" "$id"
 		)
 	else
