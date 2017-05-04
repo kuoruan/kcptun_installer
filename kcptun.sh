@@ -99,6 +99,10 @@ do_action() {
 	旧仓库已废弃，以后所有的脚本都会发布到新仓库:
 	  ${NEW_REPO_URL}
 
+	如果你正在使用旧版，可以切换到脚本目录下运行:
+	  ./kcptun.sh update
+	可以直接升级到新版。
+
 	如果你想继续使用旧版本，请自行下载:
 	  ${OLD_SHELL_URL}
 
@@ -121,7 +125,7 @@ do_action() {
 		mv -f "$shell_name" "$back_name"
 	)
 
-	if (wget --no-check-certificate -qO "$shell_name" "$NEW_SHELL_URL"); then
+	if (wget --no-check-certificate -O "$shell_name" "$NEW_SHELL_URL"); then
 		(
 			set -x
 			rm -f "$back_name"
